@@ -1,0 +1,14 @@
+:root{--bg:#f6f8fb;--card:#fff;--accent:#0b74ff;--muted:#6b7280}
+*{box-sizing:border-box}
+body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);margin:0;padding:20px}
+.container{max-width:1000px;margin:0 auto}
+.card{background:var(--card);border-radius:10px;padding:16px;box-shadow:0 6px 20px rgba(15,23,42,0.06);margin-bottom:16px}
+input,select,textarea{width:100%;padding:8px;margin-top:6px;border-radius:6px;border:1px solid #e6e9ef}
+button{padding:10px 14px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+button.danger{background:#ef4444}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.checkbox-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:8px}
+.service-item{padding:8px;border-radius:8px;border:1px solid #eee;display:flex;align-items:center;gap:8px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.actions{display:flex;gap:8px;margin-top:12px}

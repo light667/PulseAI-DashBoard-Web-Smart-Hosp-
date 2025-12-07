@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PulseAI — Inscription Hôpitaux</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main class="container">
+<h1>PulseAI — Inscription Hôpitaux</h1>
+
+
+<section id="auth" class="card">
+<div id="signupArea">
+<h2>Créer un compte</h2>
+<input id="signupHospitalName" placeholder="Nom de l'hôpital" />
+<input id="signupEmail" type="email" placeholder="Email" />
+<input id="signupPassword" type="password" placeholder="Mot de passe" />
+<button id="btnSignup">S'inscrire</button>
+</div>
+
+
+<hr />
+
+
+<div id="loginArea">
+<h2>Se connecter</h2>
+<input id="loginEmail" type="email" placeholder="Email" />
+<input id="loginPassword" type="password" placeholder="Mot de passe" />
+<button id="btnLogin">Se connecter</button>
+</div>
+</section>
+
+
+<section id="profileForm" class="card" hidden>
+<h2>Compléter le profil de l'hôpital</h2>
+<div class="grid-2">
+<div>
+<input id="name" placeholder="Nom légal" />
+<input id="email" placeholder="Email contact" />
+<input id="phone" placeholder="Téléphone" />
+<input id="address" placeholder="Adresse (optionnel)" />
+</div>
+<div>
+<label>Heures d'ouverture</label>
+<select id="daySelect"></select>
+<select id="timeRange"></select>
+<button id="addOpening">Ajouter</button>
+<div id="openingsList" class="muted small"></div>
+
+
+<label>Géolocalisation</label>
+<button id="btnGeo">Récupérer position</button>
+<div id="geoStatus" class="muted small">Position non relevée</div>
+</div>
+</div>
+
+
+<label>Services offerts</label>
+<div id="servicesGrid" class="checkbox-grid"></div>
+
+
+<textarea id="description" placeholder="Description courte"></textarea>
+
+
+<div class="actions">
+<button id="btnSubmit">Envoyer l'inscription</button>
+<button id="btnLogout" class="danger">Se déconnecter</button>
+</div>
+</section>
+
+
+</main>
+
+
+<script type="module" src="../src/supabase.js"></script>
+<script type="module" src="../src/auth.js"></script>
+<script type="module" src="../src/register.js"></script>
+</body>
+</html>
