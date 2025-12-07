@@ -3,20 +3,223 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>PulseAI — Admin</title>
+<title>PulseAI — Admin - Validation Hôpitaux</title>
 <link rel="stylesheet" href="./styles.css">
+<style>
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.tab {
+    padding: 12px 24px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-weight: 600;
+    color: #6b7280;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s;
+}
+
+.tab:hover {
+    color: var(--accent);
+}
+
+.tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.tab-badge {
+    background: #f3f4f6;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    margin-left: 6px;
+}
+
+.hospital-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.hospital-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f3f4f6;
+}
+
+.hospital-header h3 {
+    margin: 0 0 8px 0;
+    color: var(--accent);
+}
+
+.hospital-date {
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+.hospital-info {
+    margin: 16px 0;
+    line-height: 1.8;
+}
+
+.hospital-info p {
+    margin: 8px 0;
+}
+
+.hospital-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.hospital-actions button {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-approve {
+    background: #10b981;
+    color: white;
+}
+
+.btn-approve:hover {
+    background: #059669;
+}
+
+.btn-reject {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-reject:hover {
+    background: #dc2626;
+}
+
+.btn-delete {
+    background: #6b7280;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #4b5563;
+}
+
+.rejection-reason {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 12px 0;
+    border-left: 4px solid #ef4444;
+}
+
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 16px 24px;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(400px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.notification.fade-out {
+    animation: fadeOut 0.3s ease;
+}
+
+@keyframes fadeOut {
+    to { opacity: 0; transform: translateX(400px); }
+}
+
+.notification-success { border-left: 4px solid #10b981; }
+.notification-warning { border-left: 4px solid #f59e0b; }
+.notification-danger { border-left: 4px solid #ef4444; }
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+</style>
 </head>
 <body>
 <main class="container">
-<h1>PulseAI — Admin</h1>
-<section class="card">
-<h2>Liste des inscriptions</h2>
-<div id="pendingList"></div>
-</section>
+<h1>🏥 PulseAI — Administration</h1>
+
+<div class="tabs">
+    <button class="tab active" onclick="switchTab('pending')">
+        ⏳ En attente 
+        <span class="tab-badge" id="pendingCount">0</span>
+    </button>
+    <button class="tab" onclick="switchTab('approved')">
+        ✅ Approuvés 
+        <span class="tab-badge" id="approvedCount">0</span>
+    </button>
+    <button class="tab" onclick="switchTab('rejected')">
+        ❌ Rejetés 
+        <span class="tab-badge" id="rejectedCount">0</span>
+    </button>
+</div>
+
+<div id="pending-content" class="tab-content active">
+    <section class="card">
+        <h2>Hôpitaux en attente de validation</h2>
+        <div id="pendingList"></div>
+    </section>
+</div>
+
+<div id="approved-content" class="tab-content">
+    <section class="card">
+        <h2>Hôpitaux approuvés</h2>
+        <div id="approvedList"></div>
+    </section>
+</div>
+
+<div id="rejected-content" class="tab-content">
+    <section class="card">
+        <h2>Hôpitaux rejetés</h2>
+        <div id="rejectedList"></div>
+    </section>
+</div>
+
 </main>
 
-
 <script type="module" src="../src/supabase.js"></script>
-<script type="module" src="../src/admin.js"></script>
+<script type="module" src="../src/admin_hospitals.js"></script>
+<script>
+function switchTab(tab) {
+    // Désactiver tous les onglets
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'))
+    
+    // Activer l'onglet sélectionné
+    event.target.closest('.tab').classList.add('active')
+    document.getElementById(tab + '-content').classList.add('active')
+}
+</script>
 </body>
 </html>

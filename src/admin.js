@@ -7,12 +7,13 @@ import {
     deleteUser 
 } from './manage.js';
 
+// admin.js — Gestion des inscriptions d'hôpitaux
+import { supabase } from './supabase.js'
+
 // Éléments DOM
-const adminAuth = document.getElementById('admin-auth');
-const adminPanel = document.getElementById('admin-panel');
-const usersList = document.getElementById('users-list');
-const statsContent = document.getElementById('stats-content');
-const adminLogoutBtn = document.getElementById('admin-logout-btn');
+const pendingList = document.getElementById('pendingList')
+const approvedList = document.getElementById('approvedList')
+const rejectedList = document.getElementById('rejectedList')
 
 // État
 let currentAdmin = null;
