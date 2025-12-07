@@ -28,7 +28,8 @@ Dashboard web moderne avec authentification et gestion des utilisateurs basé su
 │   └── admin.js            # Fonctionnalités admin
 ├── sql/
 │   ├── init.sql            # Schéma de base de données
-│   └── rls_policies.sql    # Politiques de sécurité
+│   ├── rls_policies.sql    # Politiques de sécurité
+│   └── enable_rls.sql      # Activation RLS pour hospitals, services, ratings
 └── README.md
 ```
 
@@ -49,8 +50,9 @@ Dashboard web moderne avec authentification et gestion des utilisateurs basé su
 
 2. **Configurer la base de données**
    - Dans l'éditeur SQL de Supabase, exécutez les scripts dans cet ordre :
-     1. `sql/init.sql`
-     2. `sql/rls_policies.sql`
+     1. `sql/init.sql` - Créer le schéma de base de données
+     2. `sql/rls_policies.sql` - Politiques de sécurité pour les profils
+     3. `sql/enable_rls.sql` - Activer RLS sur hospitals, hospital_services, ratings
 
 3. **Configurer l'application**
    - Ouvrez `src/supabase.js`
