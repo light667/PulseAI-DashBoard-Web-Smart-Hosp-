@@ -1,14 +1,465 @@
-:root{--bg:#f6f8fb;--card:#fff;--accent:#0b74ff;--muted:#6b7280}
-*{box-sizing:border-box}
-body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);margin:0;padding:20px}
-.container{max-width:1000px;margin:0 auto}
-.card{background:var(--card);border-radius:10px;padding:16px;box-shadow:0 6px 20px rgba(15,23,42,0.06);margin-bottom:16px}
-input,select,textarea{width:100%;padding:8px;margin-top:6px;border-radius:6px;border:1px solid #e6e9ef}
-button{padding:10px 14px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer}
-button.danger{background:#ef4444}
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.checkbox-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:8px}
-.service-item{padding:8px;border-radius:8px;border:1px solid #eee;display:flex;align-items:center;gap:8px}
-.muted{color:var(--muted)}
-.small{font-size:13px}
-.actions{display:flex;gap:8px;margin-top:12px}
+/* ==============================================================================
+   PULSEAI - DESIGN SYSTEM MODERNE
+   ============================================================================== */
+
+:root {
+    --pulse-primary: #0d6efd;
+    --pulse-secondary: #6366f1;
+    --pulse-success: #10b981;
+    --pulse-warning: #f59e0b;
+    --pulse-danger: #ef4444;
+    --pulse-dark: #1e293b;
+    --pulse-light: #f8fafc;
+    --pulse-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --pulse-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    --pulse-shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: linear-gradient(to bottom right, #f8fafc 0%, #e2e8f0 100%);
+    font-family: 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* ==============================================================================
+   ANIMATIONS GLOBALES
+   ============================================================================== */
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-30px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+
+.slide-in-left {
+    animation: slideInLeft 0.6s ease-out;
+}
+
+/* ==============================================================================
+   PAGE LOGIN/REGISTER - DESIGN MODERNE
+   ============================================================================== */
+
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.auth-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
+    animation: shimmer 20s linear infinite;
+}
+
+.auth-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: var(--pulse-shadow-lg);
+    overflow: hidden;
+    width: 100%;
+    max-width: 950px;
+    display: flex;
+    flex-direction: row;
+    position: relative;
+    z-index: 1;
+    animation: fadeIn 0.8s ease-out;
+}
+
+.auth-visual {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9)),
+                url('https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=1000');
+    background-size: cover;
+    background-position: center;
+    width: 45%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    position: relative;
+}
+
+.auth-visual::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 200px;
+    background: linear-gradient(to top, rgba(102, 126, 234, 0.3), transparent);
+}
+
+.auth-text {
+    position: relative;
+    color: white;
+    text-align: center;
+    z-index: 1;
+}
+
+.auth-text h1 {
+    font-size: 3rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.auth-text p {
+    font-size: 1.1rem;
+    opacity: 0.95;
+    line-height: 1.6;
+}
+
+.auth-content {
+    width: 55%;
+    padding: 50px 45px;
+    animation: slideInLeft 0.8s ease-out;
+}
+
+.nav-pills .nav-link {
+    border-radius: 12px;
+    font-weight: 600;
+    padding: 12px 24px;
+    transition: all 0.3s ease;
+}
+
+.nav-pills .nav-link.active {
+    background: var(--pulse-gradient);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.form-control {
+    border-radius: 10px;
+    padding: 12px 16px;
+    border: 2px solid #e5e7eb;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: var(--pulse-secondary);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+
+.btn-primary {
+    background: var(--pulse-gradient);
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+@media (max-width: 768px) {
+    .auth-card {
+        flex-direction: column;
+    }
+    
+    .auth-visual,
+    .auth-content {
+        width: 100%;
+    }
+    
+    .auth-visual {
+        min-height: 200px;
+    }
+}
+
+/* ==============================================================================
+   DASHBOARD - LAYOUT MODERNE
+   ============================================================================== */
+
+.navbar {
+    background: white !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 1rem 0;
+}
+
+.navbar-brand {
+    font-weight: 800;
+    font-size: 1.5rem;
+    background: var(--pulse-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.stat-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    position: relative;
+    animation: fadeIn 0.6s ease-out;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--pulse-gradient);
+}
+
+.stat-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.icon-box {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    margin-bottom: 1rem;
+    background: var(--pulse-gradient);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.service-card {
+    border: 2px solid #e5e7eb;
+    border-left: 5px solid var(--pulse-secondary);
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+    animation: fadeIn 0.6s ease-out;
+}
+
+.service-card:hover {
+    border-color: var(--pulse-secondary);
+    box-shadow: 0 8px 16px rgba(99, 102, 241, 0.15);
+    transform: translateX(4px);
+}
+
+.service-card.inactive {
+    border-left-color: #cbd5e1;
+    opacity: 0.7;
+}
+
+.service-card.inactive:hover {
+    border-left-color: #94a3b8;
+}
+
+.badge {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.badge.bg-warning {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+}
+
+.badge.bg-success {
+    background: linear-gradient(135deg, #34d399, #10b981) !important;
+}
+
+.badge.bg-danger {
+    background: linear-gradient(135deg, #f87171, #ef4444) !important;
+}
+
+/* ==============================================================================
+   BOUTONS MODERNES
+   ============================================================================== */
+
+.btn {
+    border-radius: 10px;
+    padding: 10px 24px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #34d399, #10b981);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.btn-outline-primary {
+    border: 2px solid var(--pulse-secondary);
+    color: var(--pulse-secondary);
+}
+
+.btn-outline-primary:hover {
+    background: var(--pulse-gradient);
+    border-color: transparent;
+    color: white;
+}
+
+/* ==============================================================================
+   CARTE D'HÔPITAL - LISTE PUBLIQUE
+   ============================================================================== */
+
+.hospital-card-public {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    margin-bottom: 24px;
+    animation: fadeIn 0.6s ease-out;
+}
+
+.hospital-card-public:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.hospital-card-header {
+    padding: 24px;
+    border-bottom: 2px solid #f3f4f6;
+}
+
+.hospital-card-header h3 {
+    font-weight: 700;
+    color: var(--pulse-dark);
+    margin-bottom: 8px;
+}
+
+.hospital-rating {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.hospital-card-body {
+    padding: 24px;
+}
+
+.hospital-info-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    color: #6b7280;
+}
+
+.hospital-info-item i {
+    color: var(--pulse-secondary);
+    font-size: 1.2rem;
+}
+
+.hospital-services-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.service-badge {
+    background: linear-gradient(135deg, #e0e7ff, #ddd6fe);
+    color: var(--pulse-secondary);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* ==============================================================================
+   LOADING STATES
+   ============================================================================== */
+
+.skeleton {
+    background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+    border-radius: 8px;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Étapes du formulaire d'inscription */
+.signup-step {
+    display: none;
+}
+
+.signup-step.active {
+    display: block;
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#openingsList .badge {
+    cursor: pointer;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .auth-card { flex-direction: column; }
+    .auth-visual { width: 100%; height: 200px; }
+    .auth-content { width: 100%; padding: 20px; }
+}

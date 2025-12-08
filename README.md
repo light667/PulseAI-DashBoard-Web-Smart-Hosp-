@@ -1,78 +1,495 @@
-# Dashboard Web PulseAI
+# 🚀 PulseAI - Dashboard Hospitalier
 
-Dashboard web moderne avec authentification et gestion des utilisateurs basé sur Supabase.
+Plateforme web de gestion et découverte d'hôpitaux partenaires en Afrique.
 
-## 🚀 Fonctionnalités
+## 📋 Fonctionnalités
 
-- ✅ Authentification utilisateur (connexion/déconnexion)
-- ✅ Inscription de nouveaux utilisateurs
-- ✅ Gestion des profils utilisateurs
-- ✅ Panel d'administration
-- ✅ Gestion des rôles (user/admin)
-- ✅ Statistiques et analytics
-- ✅ Logs d'activité
-- ✅ Row Level Security (RLS)
+### Pour les Hôpitaux
+- ✅ Inscription et création de profil complet
+- ✅ Gestion des services médicaux proposés
+- ✅ Mise à jour en temps réel des statistiques (médecins, lits, files d'attente)
+- ✅ Système d'horaires d'ouverture personnalisables
+- ✅ Géolocalisation automatique (PostGIS)
+- ✅ Dashboard de gestion avec graphiques
+- ✅ Profil public avec informations détaillées
 
-## 📁 Structure du projet
+### Pour les Utilisateurs
+- ✅ Liste publique des hôpitaux approuvés
+- ✅ Recherche par nom ou adresse
+- ✅ Filtrage par service médical (Urgences, Pédiatrie, etc.)
+- ✅ Calcul de distance depuis position actuelle (Haversine)
+- ✅ Affichage des disponibilités en temps réel
+- ✅ Consultation des horaires d'ouverture
+- 🚧 Système de notation avec commentaires (en cours)
+
+### Pour les Administrateurs
+- ✅ Validation des nouveaux hôpitaux (pending → approved/rejected)
+- ✅ Gestion centralisée de tous les établissements
+- ✅ Statistiques globales du système
+- ✅ Contrôle qualité des profils
+
+## 🛠️ Technologies
+
+- **Frontend**: HTML5, CSS3 (Bootstrap 5), JavaScript ES6+
+- **Backend**: Supabase (PostgreSQL + Auth + Storage + Realtime)
+- **Géolocalisation**: PostGIS extension
+- **Déploiement**: Netlify (CI/CD automatique)
+- **Sécurité**: Row Level Security (RLS), HTTPS, CSP headers
+
+## 📦 Structure du Projet
 
 ```
+DASHBOARD WEB PULSEAI/
 ├── public/
-│   ├── index.html          # Page de connexion/dashboard
-│   ├── admin.html          # Panel d'administration
-│   └── styles.css          # Styles CSS
+│   ├── index.html          # Page d'accueil / Login / Inscription
+│   ├── dashboard.html      # Dashboard hôpital partenaire
+│   ├── admin.html          # Panneau admin (validation)
+│   ├── profile.html        # Profil et paramètres hôpital
+│   ├── hospitals.html      # Liste publique des hôpitaux
+│   ├── test.html           # Page de test connexion Supabase
+│   ├── install.html        # Guide d'installation DB
+│   ├── styles.css          # Styles globaux avec design system
+│   └── _redirects          # Configuration redirections Netlify
 ├── src/
-│   ├── supabase.js         # Configuration Supabase
-│   ├── auth.js             # Gestion de l'authentification
-│   ├── register.js         # Inscription utilisateurs
-│   ├── manage.js           # Gestion CRUD utilisateurs
-│   └── admin.js            # Fonctionnalités admin
+│   ├── supabase.js         # Client Supabase initialisé
+│   ├── config.js           # Configuration (URL, clés - gitignored)
+│   ├── auth.js             # Authentification et inscription
+│   ├── dashboard.js        # Logique dashboard hôpital
+│   ├── admin_panel.js      # Logique panneau admin
+│   ├── profile.js          # Gestion profil hôpital
+│   └── hospitals_public.js # Liste publique avec géolocalisation
 ├── sql/
-│   ├── init.sql            # Schéma de base de données
-│   ├── rls_policies.sql    # Politiques de sécurité
-│   └── enable_rls.sql      # Activation RLS pour hospitals, services, ratings
-└── README.md
+│   ├── complete_setup.sql      # Script SQL complet (tables + triggers)
+│   ├── final_rls_policies.sql  # Politiques RLS corrigées (FINAL)
+│   ├── fix_signup_rls.sql      # Correctif inscription urgente
+│   └── diagnostic.sql          # Diagnostic et vérifications
+├── netlify.toml            # Configuration build Netlify
+└── README.md               # Ce fichier
 ```
 
-## 🛠️ Installation
+## 🚀 Déploiement sur Netlify
 
 ### Prérequis
+1. Compte [Netlify](https://netlify.com) (gratuit)
+2. Compte [Supabase](https://supabase.com) avec projet créé
+3. Repository Git (GitHub, GitLab, Bitbucket)
 
-- Un compte [Supabase](https://supabase.com)
-- Un navigateur web moderne
-- (Optionnel) Un serveur web local pour le développement
+### Étapes de Déploiement
 
-### Configuration
+#### 1️⃣ Configuration Supabase
 
-1. **Créer un projet Supabase**
-   - Allez sur [supabase.com](https://supabase.com)
-   - Créez un nouveau projet
-   - Notez votre `URL` et `anon key`
+**a) Créer les tables**
+```bash
+# Dans Supabase SQL Editor, exécutez dans l'ordre :
+1. sql/complete_setup.sql          # Tables, triggers, fonctions
+2. sql/final_rls_policies.sql      # Politiques RLS (VERSION FINALE)
+```
 
-2. **Configurer la base de données**
-   - Dans l'éditeur SQL de Supabase, exécutez les scripts dans cet ordre :
-     1. `sql/init.sql` - Créer le schéma de base de données
-     2. `sql/rls_policies.sql` - Politiques de sécurité pour les profils
-     3. `sql/enable_rls.sql` - Activer RLS sur hospitals, hospital_services, ratings
+**b) Activer PostGIS**
+```sql
+-- Dans SQL Editor
+CREATE EXTENSION IF NOT EXISTS postgis;
+```
 
-3. **Configurer l'application**
-   - Ouvrez `src/supabase.js`
-   - Remplacez les valeurs suivantes :
-     ```javascript
-     const SUPABASE_URL = 'votre_url_supabase';
-     const SUPABASE_ANON_KEY = 'votre_anon_key';
-     ```
+**c) Créer le premier admin**
+```sql
+-- Après inscription d'un utilisateur, dans SQL Editor :
+UPDATE profiles 
+SET role = 'admin' 
+WHERE email = 'votre-email@example.com';
+```
 
-4. **Installer le client Supabase**
-   
-   Ajoutez le script CDN dans vos fichiers HTML (ou utilisez npm) :
-   ```html
-   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-   ```
+#### 2️⃣ Configuration du Projet
 
-   Ou via npm :
-   ```bash
-   npm install @supabase/supabase-js
-   ```
+**Créer `src/config.js`** (fichier ignoré par Git) :
+```javascript
+export const SUPABASE_CONFIG = {
+    url: 'https://votre-projet.supabase.co',
+    anonKey: 'votre-cle-publique-anon-key-ici'
+};
+```
+
+> 🔑 Trouvez vos clés : Supabase Dashboard → Settings → API
+
+#### 3️⃣ Déploiement Netlify
+
+**Option A - Via GitHub (Recommandé)**
+```bash
+# 1. Créer repo GitHub
+git init
+git add .
+git commit -m "🚀 Initial commit - PulseAI Dashboard"
+git branch -M main
+git remote add origin https://github.com/votre-username/pulseai-dashboard.git
+git push -u origin main
+```
+
+```bash
+# 2. Dans Netlify Dashboard
+- Cliquer "New site from Git"
+- Connecter GitHub
+- Sélectionner le repo
+- Build settings :
+  * Build command: echo "Static site - no build needed"
+  * Publish directory: public
+  * Auto-deploy: ✅ Activé
+- Cliquer "Deploy site"
+```
+
+**Option B - Via Netlify CLI**
+```bash
+# Installation
+npm install -g netlify-cli
+
+# Connexion
+netlify login
+
+# Initialisation
+netlify init
+
+# Déploiement
+netlify deploy --prod --dir=public
+```
+
+#### 4️⃣ Configuration Post-Déploiement
+
+**a) Variables d'environnement (optionnel)**
+```bash
+# Netlify Dashboard → Site settings → Environment variables
+# Ajouter (si vous voulez externaliser la config) :
+SUPABASE_URL=https://votre-projet.supabase.co
+SUPABASE_ANON_KEY=votre-anon-key
+```
+
+**b) Domaine personnalisé (optionnel)**
+```bash
+# Netlify Dashboard → Domain settings
+# Ajouter domaine : pulseai.votredomaine.com
+```
+
+**c) HTTPS et sécurité**
+- ✅ HTTPS automatique (Let's Encrypt)
+- ✅ Headers de sécurité (définis dans netlify.toml)
+- ✅ Force HTTPS activé dans _redirects
+
+## 📱 Utilisation
+
+### Pour les Hôpitaux Partenaires
+
+**1. Inscription**
+1. Visitez `/` ou `/index.html`
+2. Cliquez sur "Inscription"
+3. Remplissez les 4 étapes :
+   - Compte (email, mot de passe)
+   - Informations hôpital (nom, adresse, téléphone)
+   - Localisation (coordonnées GPS)
+   - Services proposés (sélection multiple)
+4. Attendez la validation par un admin
+
+**2. Gestion du Dashboard**
+1. Connectez-vous avec votre email/mot de passe
+2. Accédez au dashboard (`/dashboard.html`)
+3. Gérez vos services :
+   - Nombre de médecins disponibles
+   - Nombre de lits disponibles
+   - Temps d'attente estimé
+4. Mettez à jour votre profil (`/profile.html`)
+
+### Pour les Administrateurs
+
+**1. Accès Admin**
+1. Connectez-vous avec un compte admin
+2. Accédez à `/admin.html`
+
+**2. Validation des Hôpitaux**
+1. Consultez l'onglet "En attente"
+2. Vérifiez les informations
+3. Approuvez (✅) ou Rejetez (❌)
+
+### Pour les Utilisateurs Publics
+
+**Trouver un Hôpital**
+1. Visitez `/hospitals.html` (accessible sans connexion)
+2. Recherchez par nom ou adresse
+3. Filtrez par service médical
+4. Cliquez "Localiser" pour trier par distance
+5. Consultez les détails (horaires, disponibilités)
+
+## 🔐 Sécurité
+
+### Politiques RLS Appliquées
+
+**Profiles** - `profiles`
+- ✅ Lecture : Tous les utilisateurs authentifiés
+- ✅ Insertion : Lors de l'inscription uniquement
+- ✅ Mise à jour : Propriétaire ou admin
+
+**Hôpitaux** - `hospitals`
+- ✅ Lecture publique : Seulement les hôpitaux approuvés (`status = 'approved'`)
+- ✅ Lecture propriétaire : Tous les statuts pour le propriétaire
+- ✅ Insertion : Utilisateurs authentifiés uniquement
+- ✅ Mise à jour : Propriétaire uniquement
+- ✅ Suppression : Propriétaire uniquement
+
+**Services** - `hospital_services`
+- ✅ Lecture : Utilisateurs authentifiés
+- ✅ Insertion/Mise à jour/Suppression : Propriétaire de l'hôpital
+
+**Ratings** - `ratings`
+- ✅ Lecture : Utilisateurs authentifiés
+- ✅ Insertion : Utilisateurs authentifiés (1 note par utilisateur/hôpital)
+- ✅ Mise à jour : Auteur uniquement
+
+### Mesures de Sécurité Additionnelles
+- ✅ Headers de sécurité HTTP (CSP, X-Frame-Options, etc.)
+- ✅ HTTPS forcé sur production
+- ✅ Validation côté serveur (triggers PostgreSQL)
+- ✅ Mots de passe hashés (Supabase Auth)
+- ✅ Protection CSRF automatique
+
+## 🐛 Dépannage
+
+### ❌ Erreur "Failed to fetch" ou connexion échoue
+**Cause**: Tables non créées ou clés Supabase incorrectes
+```bash
+# Solution :
+1. Vérifier src/config.js (URL et clé correctes)
+2. Exécuter sql/complete_setup.sql dans Supabase
+3. Tester avec /test.html
+```
+
+### ❌ Erreur 401 "Row Level Security policy violation"
+**Cause**: Politiques RLS trop restrictives
+```bash
+# Solution :
+# Exécuter dans Supabase SQL Editor :
+sql/final_rls_policies.sql  # Version corrigée
+```
+
+### ❌ Erreur 406 lors du chargement du dashboard
+**Cause**: Aucun hôpital trouvé pour l'utilisateur
+```bash
+# Solution :
+# Vérifier dans Supabase Table Editor → hospitals
+# S'assurer que owner_id correspond à l'user ID
+```
+
+### ❌ "new row violates row-level security policy for table 'hospitals'"
+**Cause**: Politiques INSERT trop restrictives lors de l'inscription
+```bash
+# Solution rapide (correctif d'urgence) :
+sql/fix_signup_rls.sql
+
+# Solution complète :
+sql/final_rls_policies.sql
+```
+
+### ✅ Page de Test
+Visitez `/test.html` pour diagnostiquer :
+- Connexion Supabase
+- Chargement des services
+- Accès aux tables
+- Console JavaScript pour erreurs détaillées
+
+## 📊 Base de Données
+
+### Schéma
+
+**`profiles`**
+```sql
+id UUID (FK → auth.users.id)
+email TEXT UNIQUE
+role TEXT (user, hospital_admin, admin)
+created_at TIMESTAMP
+```
+
+**`hospitals`**
+```sql
+id UUID PRIMARY KEY
+owner_id UUID (FK → profiles.id)
+name TEXT
+address TEXT
+phone TEXT
+location GEOGRAPHY(Point, 4326)  -- PostGIS
+description TEXT
+openings JSONB  -- {"monday": {"open": "08:00", "close": "18:00"}, ...}
+status TEXT (pending, approved, rejected)
+average_rating DECIMAL
+total_reviews INTEGER
+created_at TIMESTAMP
+```
+
+**`services`**
+```sql
+id UUID PRIMARY KEY
+name TEXT UNIQUE
+icon TEXT
+description TEXT
+```
+
+**`hospital_services`**
+```sql
+id UUID PRIMARY KEY
+hospital_id UUID (FK → hospitals.id)
+service_id UUID (FK → services.id)
+available_doctors INTEGER DEFAULT 0
+available_beds INTEGER DEFAULT 0
+wait_time_minutes INTEGER DEFAULT 0
+last_updated TIMESTAMP
+```
+
+**`ratings`**
+```sql
+id UUID PRIMARY KEY
+hospital_id UUID (FK → hospitals.id)
+user_id UUID (FK → profiles.id)
+rating INTEGER (1-5)
+comment TEXT
+created_at TIMESTAMP
+UNIQUE(hospital_id, user_id)  -- 1 note par utilisateur
+```
+
+### Triggers Automatiques
+
+**`update_hospital_rating_on_insert`** - Recalcul moyenne après notation
+```sql
+-- Déclenché sur INSERT/UPDATE/DELETE dans ratings
+-- Met à jour average_rating et total_reviews dans hospitals
+```
+
+**`update_service_timestamp`** - Horodatage automatique
+```sql
+-- Déclenché sur UPDATE dans hospital_services
+-- Met à jour last_updated automatiquement
+```
+
+## 🎨 Design System
+
+### Variables CSS Personnalisées
+
+```css
+:root {
+    --pulse-primary: #0d6efd;
+    --pulse-secondary: #6366f1;
+    --pulse-success: #10b981;
+    --pulse-warning: #f59e0b;
+    --pulse-danger: #ef4444;
+    --pulse-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --pulse-gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    --pulse-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+```
+
+### Animations Disponibles
+
+**`fade-in`** - Apparition douce
+```css
+animation: fade-in 0.6s ease-out;
+```
+
+**`slide-in-left`** - Glissement depuis la gauche
+```css
+animation: slide-in-left 0.5s ease-out;
+```
+
+**`pulse`** - Pulsation continue
+```css
+animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+```
+
+**`shimmer`** - Effet de brillance
+```css
+animation: shimmer 2s linear infinite;
+```
+
+### Composants Prêts à l'Emploi
+
+- `.stat-card` - Carte statistique avec icône
+- `.gradient-badge` - Badge avec dégradé
+- `.modern-card` - Carte moderne avec hover
+- `.hero-section` - Section héroïque avec overlay
+- `.auth-card` - Carte d'authentification glassmorphism
+
+## 🔄 Mises à Jour Futures
+
+### TODO - Fonctionnalités Planifiées
+- [ ] **Système de notation complet**
+  - Interface utilisateur pour noter
+  - Affichage des avis sur profils
+  - Modération des commentaires
+  
+- [ ] **Page détails hôpital**
+  - Modal ou page dédiée
+  - Galerie photos
+  - Avis détaillés
+  
+- [ ] **Recherche avancée**
+  - Filtrage par rayon (10km, 50km, 100km)
+  - Filtrage par horaires d'ouverture
+  - Tri par disponibilité
+  
+- [ ] **Notifications**
+  - Notifications push pour admins (nouveaux hôpitaux)
+  - Emails de confirmation inscription
+  - Alertes disponibilité services
+  
+- [ ] **Analytics**
+  - Export PDF des statistiques
+  - Graphiques temps réel
+  - Rapport mensuel automatique
+  
+- [ ] **Mode sombre**
+  - Toggle light/dark
+  - Préférence sauvegardée
+  
+- [ ] **PWA (Progressive Web App)**
+  - Service Worker
+  - Installation sur mobile
+  - Mode offline
+
+### TODO - Technique
+- [ ] Tests unitaires (Jest)
+- [ ] Tests E2E (Playwright)
+- [ ] CI/CD GitHub Actions
+- [ ] Compression images
+- [ ] Lazy loading
+- [ ] Code splitting
+
+## 👥 Contribution
+
+Ce projet est développé pour améliorer l'accès aux soins de santé en Afrique avec ❤️.
+
+### Comment Contribuer
+1. Fork le projet
+2. Créer une branche (`git checkout -b feature/nouvelle-fonctionnalite`)
+3. Commit (`git commit -m 'Ajout nouvelle fonctionnalité'`)
+4. Push (`git push origin feature/nouvelle-fonctionnalite`)
+5. Créer une Pull Request
+
+## 📄 Licence
+
+MIT License - Utilisation libre pour projets éducatifs et commerciaux.
+
+Copyright (c) 2024 PulseAI
+
+## 🔗 Liens Utiles
+
+- [Documentation Supabase](https://supabase.com/docs)
+- [Bootstrap 5 Docs](https://getbootstrap.com/docs/5.3/)
+- [Netlify Docs](https://docs.netlify.com/)
+- [PostGIS Documentation](https://postgis.net/documentation/)
+- [MDN Web Docs](https://developer.mozilla.org/)
+
+## 📞 Support
+
+Pour toute question ou problème :
+- 📧 Email: support@pulseai.africa
+- 💬 Issues GitHub: [Créer une issue](https://github.com/votre-username/pulseai-dashboard/issues)
+
+---
+
+**✨ Déployé avec succès sur Netlify** | **🔒 Sécurisé par Supabase RLS** | **🌍 Fait pour l'Afrique**
+
 
 ## 🚦 Utilisation
 

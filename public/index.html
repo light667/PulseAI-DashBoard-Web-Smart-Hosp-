@@ -1,81 +1,199 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>PulseAI — Inscription Hôpitaux</title>
-<link rel="stylesheet" href="./styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PulseAI - Portail Partenaire</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="./styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<main class="container">
-<h1>PulseAI — Inscription Hôpitaux</h1>
 
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-visual">
+            <div class="auth-text">
+                <h1 class="display-4 fw-bold">PulseAI</h1>
+                <p class="lead">La plateforme de régulation hospitalière intelligente.</p>
+            </div>
+        </div>
 
-<section id="auth" class="card">
-<div id="signupArea">
-<h2>Créer un compte</h2>
-<input id="signupHospitalName" placeholder="Nom de l'hôpital" />
-<input id="signupEmail" type="email" placeholder="Email" />
-<input id="signupPassword" type="password" placeholder="Mot de passe" />
-<button id="btnSignup">S'inscrire</button>
+        <div class="auth-content">
+            <ul class="nav nav-pills nav-fill mb-4" id="authTabs">
+                <li class="nav-item">
+                    <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#login-pane">Connexion</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="signup-tab" data-bs-toggle="tab" data-bs-target="#signup-pane">Inscription</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="authTabsContent">
+                
+                <!-- LOGIN -->
+                <div class="tab-pane fade show active" id="login-pane">
+                    <h3 class="mb-3">Bon retour</h3>
+                    <form onsubmit="event.preventDefault();">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="loginEmail" placeholder="nom@hopital.com" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mot de passe</label>
+                            <input type="password" class="form-control" id="loginPassword" placeholder="••••••••" required>
+                        </div>
+                        <button id="btnLogin" class="btn btn-primary w-100 py-2">
+                            <span class="spinner-border spinner-border-sm d-none me-2" id="loginSpinner"></span>
+                            Se connecter
+                        </button>
+                    </form>
+                </div>
+
+                <!-- SIGNUP -->
+                <div class="tab-pane fade" id="signup-pane">
+                    <h3 class="mb-3">Inscription Hôpital</h3>
+                    <p class="text-muted small">Remplissez tous les champs pour rejoindre le réseau PulseAI</p>
+                    
+                    <form id="signupForm" onsubmit="event.preventDefault();">
+                        
+                        <!-- ÉTAPE 1 : Compte -->
+                        <div class="signup-step active" id="step1">
+                            <h5 class="mb-3"><i class="bi bi-person-circle me-2"></i>Compte Administrateur</h5>
+                            <div class="mb-3">
+                                <label class="form-label">Email <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="signupEmail" placeholder="admin@hopital.com" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Mot de passe <span class="text-danger">*</span></label>
+                                <input type="password" class="form-control" id="signupPassword" placeholder="Min. 8 caractères" required minlength="8">
+                            </div>
+                            <button type="button" class="btn btn-primary w-100" onclick="nextStep(2)">Suivant</button>
+                        </div>
+
+                        <!-- ÉTAPE 2 : Informations Hôpital -->
+                        <div class="signup-step" id="step2">
+                            <h5 class="mb-3"><i class="bi bi-building me-2"></i>Informations Établissement</h5>
+                            <div class="mb-3">
+                                <label class="form-label">Nom de l'établissement <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="signupHospitalName" placeholder="Ex: CHU Cocody" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Téléphone <span class="text-danger">*</span></label>
+                                <input type="tel" class="form-control" id="signupPhone" placeholder="+225 XX XX XX XX XX" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Adresse complète <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="signupAddress" rows="2" placeholder="Adresse, ville, pays" required></textarea>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-secondary" onclick="nextStep(1)">Retour</button>
+                                <button type="button" class="btn btn-primary flex-fill" onclick="nextStep(3)">Suivant</button>
+                            </div>
+                        </div>
+
+                        <!-- ÉTAPE 3 : Géolocalisation + Horaires -->
+                        <div class="signup-step" id="step3">
+                            <h5 class="mb-3"><i class="bi bi-geo-alt me-2"></i>Localisation & Horaires</h5>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Géolocalisation <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <button class="btn btn-outline-secondary" type="button" id="btnGetLocation">
+                                        <i class="bi bi-crosshair"></i> Détecter ma position
+                                    </button>
+                                    <input type="text" class="form-control bg-light" id="locationStatus" readonly placeholder="Non définie">
+                                </div>
+                                <small class="text-muted">Nous utilisons votre position pour aider les patients à vous trouver.</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Horaires d'ouverture</label>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-5">
+                                        <select class="form-select form-select-sm" id="daySelect">
+                                            <option value="Lundi">Lundi</option>
+                                            <option value="Mardi">Mardi</option>
+                                            <option value="Mercredi">Mercredi</option>
+                                            <option value="Jeudi">Jeudi</option>
+                                            <option value="Vendredi">Vendredi</option>
+                                            <option value="Samedi">Samedi</option>
+                                            <option value="Dimanche">Dimanche</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-5">
+                                        <select class="form-select form-select-sm" id="timeRange">
+                                            <option value="00:00-08:00">00:00 - 08:00</option>
+                                            <option value="08:00-12:00" selected>08:00 - 12:00</option>
+                                            <option value="12:00-16:00">12:00 - 16:00</option>
+                                            <option value="16:00-20:00">16:00 - 20:00</option>
+                                            <option value="20:00-23:59">20:00 - 23:59</option>
+                                            <option value="24/7">24h/24 (Urgences)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-2">
+                                        <button type="button" class="btn btn-sm btn-success w-100" id="btnAddOpening">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="openingsList" class="d-flex flex-wrap gap-1"></div>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-secondary" onclick="nextStep(2)">Retour</button>
+                                <button type="button" class="btn btn-primary flex-fill" onclick="nextStep(4)">Suivant</button>
+                            </div>
+                        </div>
+
+                        <!-- ÉTAPE 4 : Services -->
+                        <div class="signup-step" id="step4">
+                            <h5 class="mb-3"><i class="bi bi-heart-pulse me-2"></i>Services Proposés</h5>
+                            <p class="text-muted small">Cochez tous les services disponibles dans votre établissement</p>
+                            <div id="servicesGrid" class="row g-2 mb-3">
+                                <!-- Injecté par JS -->
+                                <div class="col-12 text-center py-3">
+                                    <div class="spinner-border spinner-border-sm text-primary"></div>
+                                    <span class="ms-2 text-muted">Chargement des services...</span>
+                                </div>
+                            </div>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="termsCheck" required>
+                                <label class="form-check-label small text-muted">
+                                    J'accepte de rejoindre le réseau PulseAI et de fournir des données exactes et à jour.
+                                </label>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-secondary" onclick="nextStep(3)">Retour</button>
+                                <button type="submit" class="btn btn-success flex-fill" id="btnSignup">
+                                    <span class="spinner-border spinner-border-sm d-none me-2" id="signupSpinner"></span>
+                                    Créer mon compte
+                                </button>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script type="module" src="../src/supabase.js?v=9"></script>
+<script type="module" src="../src/auth.js?v=9"></script>
 
-<hr />
+<script>
+// Navigation entre les étapes du formulaire
+function nextStep(stepNumber) {
+    document.querySelectorAll('.signup-step').forEach(s => s.classList.remove('active'));
+    document.getElementById('step' + stepNumber).classList.add('active');
+}
+</script>
 
-
-<div id="loginArea">
-<h2>Se connecter</h2>
-<input id="loginEmail" type="email" placeholder="Email" />
-<input id="loginPassword" type="password" placeholder="Mot de passe" />
-<button id="btnLogin">Se connecter</button>
-</div>
-</section>
-
-
-<section id="profileForm" class="card" hidden>
-<h2>Compléter le profil de l'hôpital</h2>
-<div class="grid-2">
-<div>
-<input id="name" placeholder="Nom légal" />
-<input id="email" placeholder="Email contact" />
-<input id="phone" placeholder="Téléphone" />
-<input id="address" placeholder="Adresse (optionnel)" />
-</div>
-<div>
-<label>Heures d'ouverture</label>
-<select id="daySelect"></select>
-<select id="timeRange"></select>
-<button id="addOpening">Ajouter</button>
-<div id="openingsList" class="muted small"></div>
-
-
-<label>Géolocalisation</label>
-<button id="btnGeo">Récupérer position</button>
-<div id="geoStatus" class="muted small">Position non relevée</div>
-</div>
-</div>
-
-
-<label>Services offerts</label>
-<div id="servicesGrid" class="checkbox-grid"></div>
-
-
-<textarea id="description" placeholder="Description courte"></textarea>
-
-
-<div class="actions">
-<button id="btnSubmit">Envoyer l'inscription</button>
-<button id="btnLogout" class="danger">Se déconnecter</button>
-</div>
-</section>
-
-
-</main>
-
-
-<script type="module" src="../src/supabase.js"></script>
-<script type="module" src="../src/auth.js"></script>
-<script type="module" src="../src/register.js"></script>
 </body>
 </html>

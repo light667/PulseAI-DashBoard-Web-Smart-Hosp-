@@ -1,0 +1,11 @@
+# Redirections pour SPA
+/* /index.html 200
+
+# Forcer HTTPS
+http://pulseai-dashboard.netlify.app/* https://pulseai-dashboard.netlify.app/:splat 301!
+
+# Redirections spécifiques
+/admin /admin.html 200
+/dashboard /dashboard.html 200
+/profile /profile.html 200
+/hospitals /hospitals.html 200

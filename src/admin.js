@@ -1,4 +1,4 @@
-import supabase from './supabase.js';
+import { supabase } from './supabase.js';
 import { 
     getAllUsers, 
     getUserStats, 
@@ -6,9 +6,6 @@ import {
     toggleUserStatus,
     deleteUser 
 } from './manage.js';
-
-// admin.js — Gestion des inscriptions d'hôpitaux
-import { supabase } from './supabase.js'
 
 // Éléments DOM
 const pendingList = document.getElementById('pendingList')
@@ -21,7 +18,7 @@ let currentAdmin = null;
 // Initialisation
 async function init() {
     // Vérifier la session
-    const { data: { session } } = await supabase.auth().getSession();
+    const { data: { session } } = await supabase.auth.getSession();
     
     if (session) {
         // Vérifier si l'utilisateur est admin
@@ -205,7 +202,7 @@ function showSuccess(message) {
 // Event Listeners
 if (adminLogoutBtn) {
     adminLogoutBtn.addEventListener('click', async () => {
-        await supabase.auth().signOut();
+        await supabase.auth.signOut();
         window.location.href = 'index.html';
     });
 }

@@ -1,18 +1,16 @@
-// dashboard.js — Interface de gestion pour les hôpitaux
+// dashboard.js — Interface complète de gestion hospitalière
 import { supabase } from './supabase.js'
 
-// État
-let currentHospital = null
+// ==============================================================================
+// ÉTAT GLOBAL
+// ==============================================================================
 let currentUser = null
+let currentHospital = null
+let hospitalServices = []
 
-// Éléments DOM
-const dashboardSection = document.getElementById('dashboardSection')
-const servicesManagement = document.getElementById('servicesManagement')
-const statsDisplay = document.getElementById('statsDisplay')
-
-// =============================================
+// ==============================================================================
 // INITIALISATION
-// =============================================
+// ==============================================================================
 async function init() {
     // Vérifier la session
     const { data: { session } } = await supabase.auth.getSession()
@@ -23,289 +21,323 @@ async function init() {
         return
     }
     
-    // Charger l'hôpital de l'utilisateur
+    // Charger les données de l'hôpital
     await loadHospital()
     
     // Charger les services
-    await loadServices()
+    await loadHospitalServices()
     
-    // Actualiser les stats
-    setInterval(updateStats, 30000) // Toutes les 30 secondes
+    // Mettre à jour les statistiques globales
+    updateGlobalStats()
+    
+    // Configurer les listeners
+    setupEventListeners()
 }
 
-// =============================================
+// ==============================================================================
 // CHARGER L'HÔPITAL
-// =============================================
+// ==============================================================================
 async function loadHospital() {
     const { data, error } = await supabase
         .from('hospitals')
-        .select(`
-            *,
-            hospital_services (
-                *,
-                services (*)
-            )
-        `)
+        .select('*')
         .eq('owner_id', currentUser.id)
-        .single()
+        .maybeSingle()
     
     if (error) {
-        console.error('Erreur:', error)
+        console.error('Erreur chargement hôpital:', error)
+        showAlert('Erreur de chargement des données: ' + error.message, 'danger')
+        return
+    }
+    
+    if (!data) {
+        console.warn('Aucun hôpital trouvé pour cet utilisateur')
+        showAlert('Aucun hôpital associé à ce compte. Veuillez vous réinscrire.', 'warning')
+        // Créer un hôpital vide pour éviter les crashes
+        currentHospital = { id: null, name: 'Non configuré', status: 'pending' }
         return
     }
     
     currentHospital = data
-    displayHospitalInfo()
+    
+    // Afficher les infos dans la navbar
+    document.getElementById('hospitalNameTitle').textContent = data.name
+    document.getElementById('userEmailDisplay').textContent = currentUser.email
+    
+    // Afficher le statut de validation
+    displayStatus(data.status, data.rejection_reason)
+    
+    // Remplir le formulaire de profil
+    document.getElementById('editName').value = data.name || ''
+    document.getElementById('editPhone').value = data.phone || ''
+    document.getElementById('editAddress').value = data.address || ''
+    
+    // Afficher la note moyenne
+    document.getElementById('averageRating').innerHTML = `
+        <i class="bi bi-star-fill"></i> ${data.average_rating || 0}
+    `
+    document.getElementById('totalRatings').textContent = data.total_ratings || 0
 }
 
-// =============================================
-// AFFICHER INFOS HÔPITAL
-// =============================================
-function displayHospitalInfo() {
-    const statusBadge = {
-        'pending': '<span class="badge badge-warning">⏳ En attente de validation</span>',
-        'approved': '<span class="badge badge-success">✅ Approuvé</span>',
-        'rejected': '<span class="badge badge-danger">❌ Rejeté</span>'
+// ==============================================================================
+// AFFICHER LE STATUT DE VALIDATION
+// ==============================================================================
+function displayStatus(status, rejectionReason) {
+    const badge = document.getElementById('hospitalStatusBadge')
+    const message = document.getElementById('statusMessage')
+    
+    switch (status) {
+        case 'pending':
+            badge.className = 'badge bg-warning text-dark fs-6 mb-2'
+            badge.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>EN ATTENTE DE VALIDATION'
+            message.textContent = 'Votre dossier est en cours d\'examen par notre équipe.'
+            break
+        case 'approved':
+            badge.className = 'badge bg-success fs-6 mb-2'
+            badge.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>ÉTABLISSEMENT VÉRIFIÉ'
+            message.textContent = 'Votre établissement est validé et visible dans l\'application Flutter.'
+            break
+        case 'rejected':
+            badge.className = 'badge bg-danger fs-6 mb-2'
+            badge.innerHTML = '<i class="bi bi-x-circle-fill me-2"></i>DOSSIER REJETÉ'
+            message.textContent = rejectionReason || 'Votre dossier a été rejeté. Contactez le support.'
+            break
+    }
+}
+
+// ==============================================================================
+// CHARGER LES SERVICES DE L'HÔPITAL
+// ==============================================================================
+async function loadHospitalServices() {
+    if (!currentHospital || !currentHospital.id) {
+        console.warn('Pas d\'hôpital chargé, impossible de charger les services')
+        hospitalServices = []
+        displayServices()
+        return
     }
     
-    document.getElementById('hospitalName').textContent = currentHospital.name
-    document.getElementById('hospitalStatus').innerHTML = statusBadge[currentHospital.status]
+    const { data, error } = await supabase
+        .from('hospital_services')
+        .select(`
+            *,
+            services (id, name, icon)
+        `)
+        .eq('hospital_id', currentHospital.id)
     
-    if (currentHospital.status === 'rejected' && currentHospital.rejection_reason) {
-        document.getElementById('rejectionReason').innerHTML = `
-            <div class="alert alert-danger">
-                <strong>Raison du rejet:</strong> ${currentHospital.rejection_reason}
+    if (error) {
+        console.error('Erreur chargement services:', error)
+        return
+    }
+    
+    hospitalServices = data
+    displayServices()
+}
+
+// ==============================================================================
+// AFFICHER LES SERVICES SOUS FORME DE CARTES
+// ==============================================================================
+function displayServices() {
+    const container = document.getElementById('servicesManagement')
+    
+    if (hospitalServices.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center text-muted py-4">
+                <i class="bi bi-info-circle fs-1"></i>
+                <p class="mt-2">Aucun service configuré lors de votre inscription.</p>
+                <p class="small">Contactez le support pour ajouter des services.</p>
             </div>
         `
-    }
-    
-    // Afficher la note
-    displayRating()
-}
-
-// =============================================
-// AFFICHER LA NOTE
-// =============================================
-function displayRating() {
-    const stars = '⭐'.repeat(Math.round(currentHospital.average_rating))
-    document.getElementById('hospitalRating').innerHTML = `
-        <div class="rating">
-            ${stars} ${currentHospital.average_rating}/5
-            <span class="muted">(${currentHospital.total_ratings} avis)</span>
-        </div>
-    `
-}
-
-// =============================================
-// CHARGER LES SERVICES
-// =============================================
-async function loadServices() {
-    const servicesContainer = document.getElementById('servicesGrid')
-    servicesContainer.innerHTML = ''
-    
-    currentHospital.hospital_services.forEach(hs => {
-        const card = createServiceCard(hs)
-        servicesContainer.appendChild(card)
-    })
-}
-
-// =============================================
-// CRÉER UNE CARTE DE SERVICE
-// =============================================
-function createServiceCard(hospitalService) {
-    const card = document.createElement('div')
-    card.className = 'service-card'
-    
-    const service = hospitalService.services
-    const availability = hospitalService.is_available ? 'Disponible' : 'Indisponible'
-    const availClass = hospitalService.is_available ? 'text-success' : 'text-danger'
-    
-    card.innerHTML = `
-        <div class="service-header">
-            <h3>${service.name}</h3>
-            <span class="${availClass}">${availability}</span>
-        </div>
-        
-        <div class="service-stats">
-            <div class="stat-item">
-                <label>👨‍⚕️ Médecins</label>
-                <input type="number" 
-                    class="stat-input" 
-                    data-field="available_doctors"
-                    data-service-id="${hospitalService.id}"
-                    value="${hospitalService.available_doctors || 0}"
-                    min="0"
-                    max="${hospitalService.total_doctors || 0}">
-                <span class="muted">/ ${hospitalService.total_doctors || 0} total</span>
-            </div>
-            
-            <div class="stat-item">
-                <label>🛏️ Lits</label>
-                <input type="number" 
-                    class="stat-input"
-                    data-field="available_beds"
-                    data-service-id="${hospitalService.id}"
-                    value="${hospitalService.available_beds || 0}"
-                    min="0"
-                    max="${hospitalService.total_beds || 0}">
-                <span class="muted">/ ${hospitalService.total_beds || 0} total</span>
-            </div>
-            
-            <div class="stat-item">
-                <label>⏱️ File d'attente</label>
-                <input type="number" 
-                    class="stat-input"
-                    data-field="queue_length"
-                    data-service-id="${hospitalService.id}"
-                    value="${hospitalService.queue_length || 0}"
-                    min="0">
-                <span class="muted">personnes</span>
-            </div>
-        </div>
-        
-        <div class="service-actions">
-            <button onclick="updateServiceConfig('${hospitalService.id}', 'total')">
-                ⚙️ Config totaux
-            </button>
-            <button onclick="toggleServiceAvailability('${hospitalService.id}', ${!hospitalService.is_available})">
-                ${hospitalService.is_available ? '🔴 Désactiver' : '🟢 Activer'}
-            </button>
-        </div>
-    `
-    
-    // Ajouter les event listeners pour les inputs
-    card.querySelectorAll('.stat-input').forEach(input => {
-        input.addEventListener('change', (e) => {
-            updateServiceStat(
-                e.target.dataset.serviceId,
-                e.target.dataset.field,
-                parseInt(e.target.value)
-            )
-        })
-    })
-    
-    return card
-}
-
-// =============================================
-// METTRE À JOUR UNE STAT DE SERVICE
-// =============================================
-async function updateServiceStat(serviceId, field, value) {
-    const { error } = await supabase
-        .from('hospital_services')
-        .update({ [field]: value })
-        .eq('id', serviceId)
-    
-    if (error) {
-        alert('Erreur: ' + error.message)
         return
     }
     
-    showNotification('✅ Mis à jour', 'success')
+    container.innerHTML = ''
+    
+    hospitalServices.forEach(hs => {
+        const card = document.createElement('div')
+        card.className = 'col-md-6'
+        card.innerHTML = `
+            <div class="card service-card ${hs.is_active ? '' : 'inactive'} mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h6 class="mb-0">
+                            <i class="bi bi-${hs.services.icon || 'circle-fill'} me-2"></i>
+                            ${hs.services.name}
+                        </h6>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" ${hs.is_active ? 'checked' : ''} 
+                                   onchange="window.toggleService('${hs.id}', this.checked)">
+                            <label class="form-check-label small text-muted">Actif</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Stats Temps Réel -->
+                    <div class="row g-2">
+                        <!-- Médecins -->
+                        <div class="col-6">
+                            <label class="small text-muted">Médecins Total</label>
+                            <input type="number" class="form-control form-control-sm" min="0" 
+                                   value="${hs.doctors_total}" 
+                                   onchange="window.updateStat('${hs.id}', 'doctors_total', this.value)">
+                        </div>
+                        <div class="col-6">
+                            <label class="small text-muted">Disponibles</label>
+                            <input type="number" class="form-control form-control-sm" min="0" 
+                                   value="${hs.doctors_available}" 
+                                   onchange="window.updateStat('${hs.id}', 'doctors_available', this.value)">
+                        </div>
+                        
+                        <!-- Lits -->
+                        <div class="col-6">
+                            <label class="small text-muted">Lits Total</label>
+                            <input type="number" class="form-control form-control-sm" min="0" 
+                                   value="${hs.beds_total}" 
+                                   onchange="window.updateStat('${hs.id}', 'beds_total', this.value)">
+                        </div>
+                        <div class="col-6">
+                            <label class="small text-muted">Disponibles</label>
+                            <input type="number" class="form-control form-control-sm" min="0" 
+                                   value="${hs.beds_available}" 
+                                   onchange="window.updateStat('${hs.id}', 'beds_available', this.value)">
+                        </div>
+                        
+                        <!-- File d'attente -->
+                        <div class="col-12">
+                            <label class="small text-muted">File d'attente (personnes)</label>
+                            <input type="number" class="form-control form-control-sm" min="0" 
+                                   value="${hs.queue_length}" 
+                                   onchange="window.updateStat('${hs.id}', 'queue_length', this.value)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `
+        container.appendChild(card)
+    })
 }
 
-// =============================================
-// CONFIGURER LES TOTAUX
-// =============================================
-window.updateServiceConfig = async function(serviceId, type) {
-    const totalDoctors = prompt('Nombre total de médecins:')
-    const totalBeds = prompt('Nombre total de lits:')
-    
-    if (totalDoctors === null || totalBeds === null) return
-    
+// ==============================================================================
+// METTRE À JOUR UNE STATISTIQUE
+// ==============================================================================
+window.updateStat = async function(serviceId, field, value) {
     const { error } = await supabase
         .from('hospital_services')
-        .update({
-            total_doctors: parseInt(totalDoctors) || 0,
-            total_beds: parseInt(totalBeds) || 0
-        })
+        .update({ [field]: parseInt(value) || 0 })
         .eq('id', serviceId)
     
     if (error) {
-        alert('Erreur: ' + error.message)
+        console.error('Erreur mise à jour:', error)
+        showAlert('Erreur lors de la mise à jour', 'danger')
         return
     }
     
-    await loadHospital()
-    await loadServices()
-    showNotification('✅ Configuration mise à jour', 'success')
+    // Recharger et mettre à jour les stats globales
+    await loadHospitalServices()
+    updateGlobalStats()
 }
 
-// =============================================
+// ==============================================================================
 // ACTIVER/DÉSACTIVER UN SERVICE
-// =============================================
-window.toggleServiceAvailability = async function(serviceId, newStatus) {
+// ==============================================================================
+window.toggleService = async function(serviceId, isActive) {
     const { error } = await supabase
         .from('hospital_services')
-        .update({ is_available: newStatus })
+        .update({ is_active: isActive })
         .eq('id', serviceId)
     
     if (error) {
-        alert('Erreur: ' + error.message)
+        console.error('Erreur toggle service:', error)
+        showAlert('Erreur lors de la modification', 'danger')
         return
     }
     
-    await loadHospital()
-    await loadServices()
-    showNotification(
-        newStatus ? '✅ Service activé' : '🔴 Service désactivé',
-        newStatus ? 'success' : 'warning'
-    )
+    showAlert(isActive ? 'Service activé' : 'Service désactivé', 'success')
+    await loadHospitalServices()
+    updateGlobalStats()
 }
 
-// =============================================
-// METTRE À JOUR LES STATISTIQUES GLOBALES
-// =============================================
-async function updateStats() {
-    if (!currentHospital) return
+// ==============================================================================
+// METTRE À JOUR LES STATS GLOBALES
+// ==============================================================================
+function updateGlobalStats() {
+    let totalDoctors = 0
+    let availableDoctors = 0
+    let availableBeds = 0
+    let totalQueue = 0
     
-    // Calculer les totaux
-    const services = currentHospital.hospital_services
-    const totalDoctors = services.reduce((sum, s) => sum + (s.available_doctors || 0), 0)
-    const totalBeds = services.reduce((sum, s) => sum + (s.available_beds || 0), 0)
-    const totalQueue = services.reduce((sum, s) => sum + (s.queue_length || 0), 0)
-    const activeServices = services.filter(s => s.is_available).length
+    hospitalServices.forEach(hs => {
+        totalDoctors += hs.doctors_total || 0
+        availableDoctors += hs.doctors_available || 0
+        availableBeds += hs.beds_available || 0
+        totalQueue += hs.queue_length || 0
+    })
     
-    document.getElementById('statsDisplay').innerHTML = `
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value">${activeServices}</div>
-                <div class="stat-label">Services actifs</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">${totalDoctors}</div>
-                <div class="stat-label">Médecins disponibles</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">${totalBeds}</div>
-                <div class="stat-label">Lits disponibles</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">${totalQueue}</div>
-                <div class="stat-label">Personnes en attente</div>
-            </div>
-        </div>
+    document.getElementById('totalDoctors').textContent = totalDoctors
+    document.getElementById('availableDoctors').textContent = availableDoctors
+    document.getElementById('availableBeds').textContent = availableBeds
+    document.getElementById('totalQueue').textContent = totalQueue
+}
+
+// ==============================================================================
+// EVENT LISTENERS
+// ==============================================================================
+function setupEventListeners() {
+    // SAUVEGARDER LE PROFIL
+    document.getElementById('btnSaveProfile')?.addEventListener('click', async () => {
+        const name = document.getElementById('editName').value.trim()
+        const phone = document.getElementById('editPhone').value.trim()
+        const address = document.getElementById('editAddress').value.trim()
+        
+        if (!name || !phone || !address) {
+            showAlert('Veuillez remplir tous les champs', 'warning')
+            return
+        }
+        
+        const { error } = await supabase
+            .from('hospitals')
+            .update({ name, phone, address })
+            .eq('id', currentHospital.id)
+        
+        if (error) {
+            console.error('Erreur sauvegarde:', error)
+            showAlert('Erreur lors de la sauvegarde', 'danger')
+            return
+        }
+        
+        showAlert('✅ Profil mis à jour avec succès', 'success')
+        await loadHospital()
+    })
+    
+    // DÉCONNEXION
+    const logoutBtn = document.getElementById('btnLogout')
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async (e) => {
+            e.preventDefault()
+            console.log('Déconnexion...')
+            await supabase.auth.signOut()
+            window.location.href = 'index.html'
+        })
+    } else {
+        console.warn('Bouton btnLogout non trouvé dans le DOM')
+    }
+}
+
+// ==============================================================================
+// AFFICHER UNE ALERTE
+// ==============================================================================
+function showAlert(message, type = 'info') {
+    const alertZone = document.getElementById('alertZone')
+    const alert = document.createElement('div')
+    alert.className = `alert alert-${type} alert-dismissible fade show`
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `
-}
-
-// =============================================
-// NOTIFICATIONS
-// =============================================
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div')
-    notification.className = `notification notification-${type}`
-    notification.textContent = message
-    document.body.appendChild(notification)
+    alertZone.appendChild(alert)
     
-    setTimeout(() => {
-        notification.classList.add('fade-out')
-        setTimeout(() => notification.remove(), 300)
-    }, 3000)
+    setTimeout(() => alert.remove(), 5000)
 }
 
-// =============================================
+// ==============================================================================
 // DÉMARRAGE
-// =============================================
+// ==============================================================================
 init()
-
-export { loadHospital, loadServices, updateStats }

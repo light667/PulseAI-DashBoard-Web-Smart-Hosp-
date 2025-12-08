@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Connexion Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Test de Connexion Supabase</h1>
+    <div id="results"></div>
+
+    <script type="module">
+        import { supabase } from '../src/supabase.js'
+
+        const results = document.getElementById('results')
+
+        async function test() {
+            results.innerHTML = '<p>⏳ Test en cours...</p>'
+
+            try {
+                // Test 1: Connexion à Supabase
+                results.innerHTML += '<h2>✅ Supabase connecté</h2>'
+                results.innerHTML += `<p>URL: ${supabase.supabaseUrl}</p>`
+
+                // Test 2: Vérifier la session
+                const { data: { session } } = await supabase.auth.getSession()
+                results.innerHTML += `<p>Session: ${session ? '✅ Connecté comme ' + session.user.email : '❌ Non connecté'}</p>`
+
+                // Test 3: Lister les services
+                results.innerHTML += '<h3>Test de la table services...</h3>'
+                const { data: services, error: servicesError } = await supabase
+                    .from('services')
+                    .select('*')
+
+                if (servicesError) {
+                    results.innerHTML += `<p>❌ Erreur services:</p>`
+                    results.innerHTML += `<pre>${JSON.stringify(servicesError, null, 2)}</pre>`
+                    results.innerHTML += `<p><strong>⚠️ La table 'services' n'existe pas !</strong></p>`
+                    results.innerHTML += `<p><strong>Action requise:</strong></p>`
+                    results.innerHTML += `<ol>
+                        <li>Ouvrez <a href="https://app.supabase.com" target="_blank">Supabase Dashboard</a></li>
+                        <li>Allez dans SQL Editor</li>
+                        <li>Copiez tout le contenu de <code>sql/complete_setup.sql</code></li>
+                        <li>Collez et exécutez (Run)</li>
+                    </ol>`
+                } else {
+                    results.innerHTML += `<p>✅ Services chargés: ${services.length} services trouvés</p>`
+                    results.innerHTML += `<ul>${services.map(s => `<li>${s.name}</li>`).join('')}</ul>`
+                }
+
+                // Test 4: Vérifier la table hospitals
+                const { data: hospitals, error: hospitalsError } = await supabase
+                    .from('hospitals')
+                    .select('*')
+
+                if (hospitalsError) {
+                    results.innerHTML += `<p>❌ Erreur hospitals: ${hospitalsError.message}</p>`
+                    results.innerHTML += `<p><strong>Solution:</strong> Exécutez le fichier <code>sql/complete_setup.sql</code> dans Supabase SQL Editor</p>`
+                } else {
+                    results.innerHTML += `<p>✅ Table hospitals OK: ${hospitals.length} hôpitaux trouvés</p>`
+                }
+
+                // Test 5: Vérifier mon hôpital (si connecté)
+                if (session) {
+                    const { data: myHospital, error: myError } = await supabase
+                        .from('hospitals')
+                        .select('*')
+                        .eq('owner_id', session.user.id)
+                        .maybeSingle()
+
+                    if (myError) {
+                        results.innerHTML += `<p>❌ Erreur recherche hôpital: ${myError.message}</p>`
+                    } else if (myHospital) {
+                        results.innerHTML += `<p>✅ Votre hôpital: ${myHospital.name} (${myHospital.status})</p>`
+                    } else {
+                        results.innerHTML += `<p>⚠️ Aucun hôpital associé à votre compte</p>`
+                    }
+                }
+
+            } catch (error) {
+                results.innerHTML += `<p>❌ Erreur globale: ${error.message}</p>`
+                console.error(error)
+            }
+        }
+
+        test()
+    </script>
+</body>
+</html>
