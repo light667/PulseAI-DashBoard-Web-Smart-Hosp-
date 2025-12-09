@@ -1,46 +1,56 @@
-# PulseAI Dashboard - Configuration Netlify
-
 [build]
-  # Répertoire contenant les fichiers statiques
+  # Pas de build nécessaire - site statique
   publish = "public"
   
-  # Pas de commande de build nécessaire (site statique)
-  command = "echo 'Site statique - Pas de build requis'"
+[build.environment]
+  NODE_VERSION = "18"
 
 [[redirects]]
-  # Redirection de la racine vers index.html
-  from = "/"
-  to = "/index.html"
-  status = 200
-
-[[redirects]]
-  # SPA fallback - toutes les routes vers index.html (sauf fichiers existants)
   from = "/*"
   to = "/index.html"
   status = 200
-  conditions = {path = ["!*.js", "!*.css", "!*.html", "!*.png", "!*.jpg", "!*.jpeg", "!*.svg", "!*.ico"]}
+  force = false
+  
+[[redirects]]
+  from = "/admin"
+  to = "/admin.html"
+  status = 200
+  
+[[redirects]]
+  from = "/dashboard"
+  to = "/dashboard.html"
+  status = 200
+  
+[[redirects]]
+  from = "/profile"
+  to = "/profile.html"
+  status = 200
+  
+[[redirects]]
+  from = "/hospitals"
+  to = "/hospitals.html"
+  status = 200
 
 [[headers]]
-  # En-têtes de sécurité pour tous les fichiers
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
     X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-
+    Permissions-Policy = "geolocation=(self), microphone=(), camera=()"
+    
 [[headers]]
-  # Cache pour les assets statiques
-  for = "/styles.css"
+  for = "/*.js"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
+    Cache-Control = "public, max-age=604800, immutable"
+    
 [[headers]]
-  # Cache pour les scripts
-  for = "*.js"
+  for = "/*.css"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-# Variables d'environnement (à configurer dans Netlify UI)
-# SUPABASE_URL = votre URL Supabase
-# SUPABASE_ANON_KEY = votre clé publique Supabase
+    Cache-Control = "public, max-age=604800, immutable"
+    
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

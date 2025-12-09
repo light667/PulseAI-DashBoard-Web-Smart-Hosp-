@@ -1,5 +1,10 @@
 // auth.js — Gestion complète de l'authentification et inscription
 import { supabase } from './supabase.js'
+import { api } from './utils/api.js'
+import { notify } from './utils/notifications.js'
+import { validators, validateForm, displayFormErrors, clearFormErrors } from './utils/validation.js'
+import { store } from './utils/store.js'
+import { cache } from './utils/cache.js'
 
 // ==============================================================================
 // VARIABLES GLOBALES
@@ -23,32 +28,60 @@ document.addEventListener('DOMContentLoaded', async () => {
 // CHARGER LES SERVICES DEPUIS SUPABASE
 // ==============================================================================
 async function loadServices() {
-    const { data: services, error } = await supabase
-        .from('services')
-        .select('*')
-        .order('name')
-    
-    if (error) {
+    try {
+        // Utiliser le cache pour éviter les requêtes répétées
+        const services = await cache.getOrFetch('services', async () => {
+            const { data, error } = await api.getAllServices()
+            if (error) throw error
+            return data
+        }, 30 * 60 * 1000) // Cache 30 minutes
+        
+        if (!services || services.length === 0) {
+            notify.warning('Aucun service médical disponible')
+            return
+        }
+        
+        store.setServices(services)
+        
+        const grid = document.getElementById('servicesGrid')
+        if (!grid) return
+        
+        grid.innerHTML = '' // Vider le spinner
+        
+        // Grouper par catégorie
+        const categories = {}
+        services.forEach(service => {
+            const cat = service.category || 'Autre'
+            if (!categories[cat]) categories[cat] = []
+            categories[cat].push(service)
+        })
+        
+        // Afficher par catégorie
+        Object.entries(categories).forEach(([category, categoryServices]) => {
+            const categoryHeader = document.createElement('div')
+            categoryHeader.className = 'col-12 mt-3'
+            categoryHeader.innerHTML = `<h6 class="text-muted">${category}</h6>`
+            grid.appendChild(categoryHeader)
+            
+            categoryServices.forEach(service => {
+                const col = document.createElement('div')
+                col.className = 'col-md-4 col-6'
+                col.innerHTML = `
+                    <div class="form-check service-checkbox">
+                        <input class="form-check-input" type="checkbox" value="${service.id}" id="svc${service.id}">
+                        <label class="form-check-label" for="svc${service.id}">
+                            <i class="bi bi-${service.icon || 'circle-fill'}" style="color: ${service.color || '#3b82f6'}"></i>
+                            <span>${service.name}</span>
+                        </label>
+                    </div>
+                `
+                grid.appendChild(col)
+            })
+        })
+    } catch (error) {
         console.error('Erreur chargement services:', error)
-        return
+        notify.error('Impossible de charger les services médicaux')
     }
-    
-    const grid = document.getElementById('servicesGrid')
-    grid.innerHTML = '' // Vider le spinner
-    
-    services.forEach(service => {
-        const col = document.createElement('div')
-        col.className = 'col-6'
-        col.innerHTML = `
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" value="${service.id}" id="svc${service.id}">
-                <label class="form-check-label small" for="svc${service.id}">
-                    <i class="bi bi-${service.icon || 'circle-fill'}"></i> ${service.name}
-                </label>
-            </div>
-        `
-        grid.appendChild(col)
-    })
 }
 
 // ==============================================================================
@@ -125,24 +158,52 @@ async function handleLogin() {
     const email = document.getElementById('loginEmail').value.trim()
     const password = document.getElementById('loginPassword').value
     
-    if (!email || !password) {
-        alert('Veuillez remplir tous les champs')
+    // Validation
+    clearFormErrors()
+    
+    if (!validators.email(email)) {
+        displayFormErrors({ loginEmail: 'Adresse email invalide' })
+        return
+    }
+    
+    if (!password) {
+        displayFormErrors({ loginPassword: 'Mot de passe requis' })
         return
     }
     
     const spinner = document.getElementById('loginSpinner')
+    const btn = document.getElementById('btnLogin')
+    
     spinner.classList.remove('d-none')
+    btn.disabled = true
     
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    const loader = notify.loading('Connexion en cours...')
     
-    spinner.classList.add('d-none')
-    
-    if (error) {
-        alert('Erreur de connexion: ' + error.message)
-        return
+    try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+        
+        if (error) throw error
+        
+        store.setUser(data.user)
+        loader.update('Connexion réussie!', 'success')
+        
+        // Redirection après un court délai
+        setTimeout(() => {
+            window.location.href = 'dashboard.html'
+        }, 500)
+    } catch (error) {
+        console.error('Login error:', error)
+        loader.dismiss()
+        
+        if (error.message.includes('Invalid login credentials')) {
+            notify.error('Email ou mot de passe incorrect')
+        } else {
+            notify.error('Erreur de connexion: ' + error.message)
+        }
+    } finally {
+        spinner.classList.add('d-none')
+        btn.disabled = false
     }
-    
-    window.location.href = 'dashboard.html'
 }
 
 // ==============================================================================
@@ -150,19 +211,56 @@ async function handleLogin() {
 // ==============================================================================
 async function handleSignup() {
     // VALIDATION
-    const email = document.getElementById('signupEmail').value.trim()
-    const password = document.getElementById('signupPassword').value
-    const hospitalName = document.getElementById('signupHospitalName').value.trim()
-    const phone = document.getElementById('signupPhone').value.trim()
-    const address = document.getElementById('signupAddress').value.trim()
+    clearFormErrors()
     
-    if (!email || !password || !hospitalName || !phone || !address) {
-        alert('Veuillez remplir tous les champs obligatoires (*)')
+    const formData = {
+        email: document.getElementById('signupEmail').value.trim(),
+        password: document.getElementById('signupPassword').value,
+        hospitalName: document.getElementById('signupHospitalName').value.trim(),
+        phone: document.getElementById('signupPhone').value.trim(),
+        address: document.getElementById('signupAddress').value.trim()
+    }
+    
+    // Règles de validation
+    const rules = {
+        email: {
+            required: true,
+            validator: validators.email,
+            message: 'Adresse email invalide'
+        },
+        password: {
+            required: true,
+            validator: validators.password,
+            message: 'Mot de passe trop faible'
+        },
+        hospitalName: {
+            required: true,
+            minLength: 3,
+            message: 'Le nom de l\'hôpital doit contenir au moins 3 caractères'
+        },
+        phone: {
+            required: true,
+            validator: validators.phone,
+            message: 'Numéro de téléphone invalide'
+        },
+        address: {
+            required: true,
+            minLength: 10,
+            message: 'Adresse trop courte (minimum 10 caractères)'
+        }
+    }
+    
+    const validation = validateForm(formData, rules)
+    
+    if (!validation.valid) {
+        displayFormErrors(validation.errors)
+        notify.warning('Veuillez corriger les erreurs dans le formulaire')
         return
     }
     
     if (!userLocation) {
-        alert('Veuillez autoriser la géolocalisation pour continuer')
+        notify.warning('Veuillez autoriser la géolocalisation pour continuer')
+        document.getElementById('btnGetLocation')?.classList.add('btn-pulse')
         return
     }
     
@@ -171,12 +269,12 @@ async function handleSignup() {
         .map(input => parseInt(input.value))
     
     if (selectedServices.length === 0) {
-        alert('Veuillez sélectionner au moins un service')
+        notify.warning('Veuillez sélectionner au moins un service médical')
         return
     }
     
-    if (!document.getElementById('termsCheck').checked) {
-        alert('Veuillez accepter les conditions')
+    if (!document.getElementById('termsCheck')?.checked) {
+        notify.warning('Veuillez accepter les conditions d\'utilisation')
         return
     }
     
@@ -185,14 +283,16 @@ async function handleSignup() {
     spinner.classList.remove('d-none')
     btn.disabled = true
     
+    const loader = notify.loading('Création du compte en cours...')
+    
     try {
         // 1. CRÉER LE COMPTE AUTH
         const { data: authData, error: authError } = await supabase.auth.signUp({
-            email,
-            password,
+            email: formData.email,
+            password: formData.password,
             options: {
                 data: {
-                    full_name: hospitalName,
+                    full_name: formData.hospitalName,
                     role: 'hospital_admin'
                 },
                 emailRedirectTo: window.location.origin + '/public/dashboard.html'
@@ -202,88 +302,58 @@ async function handleSignup() {
         if (authError) throw authError
         
         if (!authData.user) {
-            throw new Error('Échec de création du compte utilisateur')
+            throw new Error('Erreur lors de la création du compte')
         }
         
-        const userId = authData.user.id
-        console.log('Utilisateur créé avec ID:', userId)
+        loader.update('Compte créé! Configuration de l\'hôpital...', 'info')
         
-        // Attendre que la session soit établie (important pour RLS)
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // 2. CRÉER L'ENREGISTREMENT HÔPITAL
-        const { data: hospitalData, error: hospitalError } = await supabase
-            .from('hospitals')
-            .insert([{
-                owner_id: userId,
-                name: hospitalName,
-                email: email,
-                phone: phone,
-                address: address,
-                location: `POINT(${userLocation.lng} ${userLocation.lat})`,
-                openings: openings,
-                status: 'pending'
-            }])
-            .select()
-        
-        if (hospitalError) {
-            console.error('Erreur création hôpital:', hospitalError)
-            throw new Error('Impossible de créer le profil hôpital: ' + hospitalError.message)
+        // 2. CRÉER L'HÔPITAL
+        const hospitalData = {
+            owner_id: authData.user.id,
+            name: formData.hospitalName,
+            email: formData.email,
+            phone: formData.phone,
+            address: formData.address,
+            location: {
+                type: 'Point',
+                coordinates: [userLocation.lng, userLocation.lat]
+            },
+            openings: openings,
+            status: 'pending'
         }
         
-        const hospitalId = hospitalData[0].id
+        const { data: hospital, error: hospitalError } = await api.createHospital(hospitalData)
         
-        // 3. INSÉRER LES SERVICES SÉLECTIONNÉS
-        const serviceInserts = selectedServices.map(serviceId => ({
-            hospital_id: hospitalId,
-            service_id: serviceId,
-            is_active: true,
-            doctors_total: 0,
-            doctors_available: 0,
-            beds_total: 0,
-            beds_available: 0,
-            queue_length: 0
-        }))
+        if (hospitalError) throw hospitalError
         
-        const { error: servicesError } = await supabase
-            .from('hospital_services')
-            .insert(serviceInserts)
+        loader.update('Hôpital créé! Ajout des services...', 'info')
         
-        if (servicesError) throw servicesError
-        
-        // SUCCÈS !
-        alert('✅ Inscription réussie ! Votre compte est en attente de validation par notre équipe.')
-        
-        console.log('Inscription terminée. Session:', authData.session)
-        
-        // Redirection automatique si session active
-        if (authData.session) {
-            console.log('Session active, redirection vers dashboard...')
-            setTimeout(() => {
-                window.location.href = 'dashboard.html'
-            }, 1500)
-        } else {
-            alert('📧 Un email de confirmation vous a été envoyé. Vérifiez votre boîte de réception puis connectez-vous.')
-            // Basculer vers l'onglet connexion
-            setTimeout(() => {
-                document.getElementById('login-tab').click()
-            }, 2000)
+        // 3. AJOUTER LES SERVICES
+        for (const serviceId of selectedServices) {
+            await api.upsertHospitalService(hospital.id, serviceId)
         }
+        
+        loader.update('✅ Inscription réussie! Redirection...', 'success')
+        
+        // Nettoyer le cache
+        cache.invalidate('hospitals')
+        
+        // Redirection
+        setTimeout(() => {
+            window.location.href = 'dashboard.html'
+        }, 1500)
         
     } catch (error) {
-        console.error('Erreur inscription:', error)
+        console.error('Signup error:', error)
+        loader.dismiss()
         
-        let errorMessage = error.message
-        
-        if (error.message.includes('Failed to fetch') || error.message.includes('ERR_CONNECTION_CLOSED')) {
-            errorMessage = 'Erreur de connexion. Vérifiez votre connexion internet et réessayez dans quelques secondes.'
-        } else if (error.message.includes('Email rate limit exceeded')) {
-            errorMessage = 'Trop de tentatives. Attendez 60 secondes et réessayez.'
-        } else if (error.message.includes('User already registered')) {
-            errorMessage = 'Cet email est déjà enregistré. Utilisez la connexion.'
+        if (error.message.includes('already registered')) {
+            notify.error('Cet email est déjà utilisé')
+        } else if (error.message.includes('Password')) {
+            notify.error('Le mot de passe ne respecte pas les critères de sécurité')
+        } else {
+            notify.error('Erreur lors de l\'inscription: ' + error.message)
         }
-        
-        alert('❌ Erreur lors de l\'inscription: ' + errorMessage)
     } finally {
         spinner.classList.add('d-none')
         btn.disabled = false

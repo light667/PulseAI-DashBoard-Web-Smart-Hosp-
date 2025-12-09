@@ -1,0 +1,21 @@
+{
+  "name": "pulseai-dashboard-web",
+  "version": "1.0.0",
+  "description": "PulseAI - Dashboard Web pour partenaires hospitaliers",
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve public -p 3000",
+    "preview": "npx serve public"
+  },
+  "keywords": [
+    "pulseai",
+    "healthcare",
+    "hospital",
+    "dashboard"
+  ],
+  "author": "PulseAI Team",
+  "license": "ISC",
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}
