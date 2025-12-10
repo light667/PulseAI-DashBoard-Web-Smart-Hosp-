@@ -487,12 +487,22 @@ async function handleSignup() {
     if (!validation.valid) {
         displayFormErrors(validation.errors)
         notify.warning('Veuillez corriger les erreurs dans le formulaire')
+        // Réactiver le bouton si erreur
+        const spinner = document.getElementById('signupSpinner')
+        const btn = document.getElementById('btnSignup')
+        if (spinner) spinner.classList.add('d-none')
+        if (btn) btn.disabled = false
         return
     }
     
     if (!userLocation) {
         notify.warning('Veuillez autoriser la géolocalisation pour continuer')
         document.getElementById('btnGetLocation')?.classList.add('btn-pulse')
+        // Réactiver le bouton si erreur
+        const spinner = document.getElementById('signupSpinner')
+        const btn = document.getElementById('btnSignup')
+        if (spinner) spinner.classList.add('d-none')
+        if (btn) btn.disabled = false
         return
     }
     
