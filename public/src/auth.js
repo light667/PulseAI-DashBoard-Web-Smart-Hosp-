@@ -42,16 +42,17 @@ async function initAuth() {
                 const loopCount = parseInt(sessionStorage.getItem('auth_loop_count') || '0');
                 if (loopCount > 2) {
                     console.warn('🛑 Boucle de redirection détectée. Arrêt.');
-                    // notify.error('Problème de connexion. Veuillez réessayer.');
                     // On ne reset pas tout de suite pour éviter que ça reparte
                     return;
                 }
+                
+                // Only increment if we are actually redirecting automatically
                 sessionStorage.setItem('auth_loop_count', (loopCount + 1).toString());
 
                 console.log('✅ Session active détectée, redirection vers le dashboard...')
                 window.location.href = 'dashboard.html'
             }
-        }, 500);
+        }, 1000);
     } catch (e) {
         console.warn('Erreur vérification session:', e)
     }
@@ -449,10 +450,13 @@ async function handleLogin() {
         store.setUser(data.user)
         loader.update('Connexion réussie!', 'success')
         
+        // Reset loop counter on successful manual login
+        sessionStorage.removeItem('auth_loop_count');
+
         // Redirection après un court délai
         setTimeout(() => {
             window.location.href = 'dashboard.html'
-        }, 500)
+        }, 1000)
     } catch (error) {
         console.error('Login error:', error)
         loader.dismiss()
