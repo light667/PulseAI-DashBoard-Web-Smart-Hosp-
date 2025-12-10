@@ -7,10 +7,31 @@
   NODE_VERSION = "18"
 
 # Redirection de correction pour les URLs contenant /public (Erreur Supabase fréquente)
+# On tente d'abord une redirection propre (301)
 [[redirects]]
   from = "/public/*"
   to = "/:splat"
   status = 301
+  force = true
+
+# Ceinture et bretelles : Si la redirection échoue ou si le navigateur insiste,
+# on sert les fichiers correctement même avec le préfixe /public
+[[redirects]]
+  from = "/public/src/*"
+  to = "/src/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/public/*.css"
+  to = "/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/public/*.js"
+  to = "/:splat"
+  status = 200
   force = true
 
 [[redirects]]
