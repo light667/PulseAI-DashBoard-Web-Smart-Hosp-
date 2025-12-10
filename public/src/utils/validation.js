@@ -16,20 +16,11 @@ export const validators = {
 
     /**
      * Valide un mot de passe
-     * Minimum 8 caractères, 1 majuscule, 1 minuscule, 1 chiffre
+     * Minimum 6 caractères (simplifié pour éviter les blocages)
      */
     password(password) {
-        if (password.length < 8) {
-            return { valid: false, message: 'Le mot de passe doit contenir au moins 8 caractères' };
-        }
-        if (!/[A-Z]/.test(password)) {
-            return { valid: false, message: 'Le mot de passe doit contenir au moins une majuscule' };
-        }
-        if (!/[a-z]/.test(password)) {
-            return { valid: false, message: 'Le mot de passe doit contenir au moins une minuscule' };
-        }
-        if (!/[0-9]/.test(password)) {
-            return { valid: false, message: 'Le mot de passe doit contenir au moins un chiffre' };
+        if (!password || password.length < 6) {
+            return { valid: false, message: 'Le mot de passe doit contenir au moins 6 caractères' };
         }
         return { valid: true, message: 'Mot de passe valide' };
     },
@@ -132,8 +123,13 @@ export function validateForm(formData, rules) {
         // Validation personnalisée
         if (rule.validator && value) {
             const result = rule.validator(value);
-            if (result === false || (result && !result.valid)) {
+            // Si le validateur retourne un objet {valid: false}, c'est une erreur
+            if (typeof result === 'object' && result.valid === false) {
                 errors[field] = result.message || rule.message || `Le champ ${field} est invalide`;
+            }
+            // Si le validateur retourne false (booléen), c'est une erreur
+            else if (result === false) {
+                errors[field] = rule.message || `Le champ ${field} est invalide`;
             }
         }
 
