@@ -509,13 +509,17 @@ async function handleSignup() {
     
     if (!document.getElementById('termsCheck')?.checked) {
         notify.warning('Veuillez accepter les conditions d\'utilisation')
+        // Réactiver le bouton si erreur
+        if (spinner) spinner.classList.add('d-none')
+        if (btn) btn.disabled = false
         return
     }
     
-    const spinner = document.getElementById('signupSpinner')
-    const btn = document.getElementById('btnSignup')
-    if (spinner) spinner.classList.remove('d-none')
-    if (btn) btn.disabled = true
+    // On ne réactive pas le spinner ici car il est déjà activé par l'event listener
+    // const spinner = document.getElementById('signupSpinner')
+    // const btn = document.getElementById('btnSignup')
+    // if (spinner) spinner.classList.remove('d-none')
+    // if (btn) btn.disabled = true
     
     console.log('🚀 Début de l\'inscription...')
     console.log('📧 Email:', formData.email)
