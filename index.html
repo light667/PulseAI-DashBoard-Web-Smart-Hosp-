@@ -46,7 +46,7 @@
                 <!-- LOGIN -->
                 <div class="tab-pane fade show active" id="login-pane">
                     <h3 class="mb-3">Bon retour</h3>
-                    <form onsubmit="event.preventDefault();">
+                    <form id="loginForm" novalidate>
                         <div class="mb-3">
                             <label class="form-label">Email</label>
                             <input type="email" class="form-control" id="loginEmail" placeholder="nom@hopital.com" required>
@@ -55,7 +55,7 @@
                             <label class="form-label">Mot de passe</label>
                             <input type="password" class="form-control" id="loginPassword" placeholder="••••••••" required>
                         </div>
-                        <button id="btnLogin" class="btn btn-primary w-100 py-2">
+                        <button type="submit" id="btnLogin" class="btn btn-primary w-100 py-2">
                             <span class="spinner-border spinner-border-sm d-none me-2" id="loginSpinner"></span>
                             Se connecter
                         </button>

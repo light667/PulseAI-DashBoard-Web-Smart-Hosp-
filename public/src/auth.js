@@ -39,13 +39,16 @@ async function initAuth() {
             const { data: { session } } = await supabase.auth.getSession()
             if (session) {
                 // VALIDATION SERVEUR : Vérifier si l'utilisateur existe vraiment
+                // On utilise getUser() qui fait un appel réseau pour valider le token
                 const { data: { user }, error: userError } = await supabase.auth.getUser();
                 
                 if (userError || !user) {
-                    console.warn('⚠️ Session invalide ou utilisateur supprimé. Nettoyage...');
+                    console.warn('⚠️ Session invalide ou utilisateur supprimé. Nettoyage complet...');
                     await supabase.auth.signOut();
-                    localStorage.clear();
+                    localStorage.clear(); // Nettoyage radical
                     sessionStorage.clear();
+                    // On recharge la page pour être sûr d'être propre
+                    window.location.reload();
                     return;
                 }
 
@@ -181,10 +184,17 @@ function setupEventListeners() {
     })
     
     // LOGIN
-    const btnLogin = document.getElementById('btnLogin')
-    if (btnLogin) {
-        btnLogin.addEventListener('click', handleLogin)
-        console.log('✓ Écouteur LOGIN configuré')
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+        console.log('✓ Écouteur LOGIN (submit) configuré');
+    } else {
+        // Fallback pour compatibilité si le HTML n'est pas à jour
+        const btnLogin = document.getElementById('btnLogin');
+        if (btnLogin) {
+            btnLogin.addEventListener('click', handleLogin);
+            console.log('✓ Écouteur LOGIN (click) configuré');
+        }
     }
     
     // SIGNUP - Écouter le SUBMIT du formulaire
