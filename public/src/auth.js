@@ -141,15 +141,32 @@ function setupEventListeners() {
         console.log('✓ Écouteur LOGIN configuré')
     }
     
-    // SIGNUP - Écouter le SUBMIT du formulaire, pas le click du bouton
+    // SIGNUP - Écouter le SUBMIT du formulaire
     const signupForm = document.getElementById('signupForm')
     if (signupForm) {
+        // Désactiver la validation HTML5 native qui peut bloquer silencieusement
+        signupForm.setAttribute('novalidate', 'true')
+        
         signupForm.addEventListener('submit', (e) => {
             e.preventDefault()
             console.log('📝 Formulaire d\'inscription soumis!')
             handleSignup()
         })
         console.log('✓ Écouteur SIGNUP (submit) configuré')
+    }
+
+    // SÉCURITÉ SUPPLÉMENTAIRE: Écouter aussi le clic sur le bouton
+    const btnSignup = document.getElementById('btnSignup')
+    if (btnSignup) {
+        btnSignup.addEventListener('click', (e) => {
+            // On ne fait rien ici, on laisse le submit se déclencher
+            // Sauf si le bouton est disabled
+            if (btnSignup.disabled) {
+                e.preventDefault()
+                e.stopPropagation()
+            }
+            console.log('🖱️ Clic sur bouton inscription détecté')
+        })
     }
     
     // LOGOUT
