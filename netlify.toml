@@ -6,6 +6,13 @@
 [build.environment]
   NODE_VERSION = "18"
 
+# Redirection de correction pour les URLs contenant /public (Erreur Supabase fréquente)
+[[redirects]]
+  from = "/public/*"
+  to = "/:splat"
+  status = 301
+  force = true
+
 [[redirects]]
   from = "/src/*"
   to = "/src/:splat"
