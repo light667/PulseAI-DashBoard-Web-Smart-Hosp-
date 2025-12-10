@@ -18,17 +18,22 @@ let selectedServices = [] // [1, 3, 5, ...] (IDs des services cochés)
 // ==============================================================================
 async function initAuth() {
     console.log('🚀 PulseAI Auth - Initialisation...')
-
-    // 0. Vérifier si déjà connecté (Redirection Dashboard)
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session) {
-        console.log('✅ Session active détectée, redirection vers le dashboard...')
-        window.location.href = 'dashboard.html'
-        return
-    }
     
     // 1. Configurer les listeners EN PREMIER (pour que les boutons marchent tout de suite)
     setupEventListeners()
+
+    // 0. Vérifier si déjà connecté (Redirection Dashboard)
+    // On ne bloque pas l'initialisation pour ça, mais on redirige si besoin
+    try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+            console.log('✅ Session active détectée, redirection vers le dashboard...')
+            window.location.href = 'dashboard.html'
+            return
+        }
+    } catch (e) {
+        console.warn('Erreur vérification session:', e)
+    }
     
     // 2. Charger les données ensuite
     await loadServices()
