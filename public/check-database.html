@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérification Base de Données - PulseAI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .check-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status-ok { color: #28a745; }
+        .status-warning { color: #ffc107; }
+        .status-error { color: #dc3545; }
+        .status-info { color: #17a2b8; }
+        pre {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <h1><i class="bi bi-database-check me-2"></i>Vérification Base de Données</h1>
+            <p class="text-muted">Diagnostic complet de l'état de la base de données PulseAI</p>
+            <button id="btnCheck" class="btn btn-primary btn-lg mt-3">
+                <i class="bi bi-play-circle me-2"></i>Lancer la Vérification
+            </button>
+            <div class="spinner-border text-primary ms-3 d-none" id="spinner"></div>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        import { supabase } from './src/supabase.js?v=11'
+
+        const resultsDiv = document.getElementById('results')
+        const spinner = document.getElementById('spinner')
+        const btnCheck = document.getElementById('btnCheck')
+
+        async function runDiagnostic() {
+            resultsDiv.innerHTML = ''
+            spinner.classList.remove('d-none')
+            btnCheck.disabled = true
+
+            const checks = []
+
+            try {
+                // 1. Vérifier les tables
+                checks.push(await checkTables())
+                
+                // 2. Compter les données
+                checks.push(await countData())
+                
+                // 3. Vérifier les hôpitaux
+                checks.push(await checkHospitals())
+                
+                // 4. Vérifier les services
+                checks.push(await checkServices())
+                
+                // 5. Vérifier les utilisateurs
+                checks.push(await checkUsers())
+                
+                // 6. Vérifier les géolocalisations
+                checks.push(await checkGeolocations())
+                
+                // 7. Diagnostiquer les problèmes
+                checks.push(await diagnoseIssues())
+                
+                // 8. Statistiques globales
+                checks.push(await globalStats())
+
+            } catch (err) {
+                resultsDiv.innerHTML += `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Erreur:</strong> ${err.message}
+                    </div>
+                `
+            } finally {
+                spinner.classList.add('d-none')
+                btnCheck.disabled = false
+            }
+        }
+
+        async function checkTables() {
+            const section = createSection('1. Tables de la Base de Données')
+            
+            const tables = ['profiles', 'hospitals', 'hospital_services', 'services', 'ratings', 'activity_logs', 'analytics']
+            let html = '<table class="table table-sm"><thead><tr><th>Table</th><th>Status</th></tr></thead><tbody>'
+            
+            for (const table of tables) {
+                const { count, error } = await supabase.from(table).select('*', { count: 'exact', head: true })
+                
+                if (error) {
+                    html += `<tr><td>${table}</td><td class="status-error"><i class="bi bi-x-circle"></i> Erreur: ${error.message}</td></tr>`
+                } else {
+                    html += `<tr><td>${table}</td><td class="status-ok"><i class="bi bi-check-circle"></i> Existe (${count} lignes)</td></tr>`
+                }
+            }
+            
+            html += '</tbody></table>'
+            section.innerHTML += html
+            resultsDiv.appendChild(section)
+        }
+
+        async function countData() {
+            const section = createSection('2. Nombre d\'Enregistrements')
+            
+            const counts = {}
+            
+            // Compter chaque table
+            const tables = {
+                'Profils Utilisateurs': 'profiles',
+                'Hôpitaux': 'hospitals',
+                'Services Disponibles': 'services',
+                'Services par Hôpital': 'hospital_services',
+                'Avis Clients': 'ratings',
+                'Logs d\'Activité': 'activity_logs',
+                'Analytics': 'analytics'
+            }
+            
+            let html = '<div class="row">'
+            
+            for (const [label, table] of Object.entries(tables)) {
+                const { count } = await supabase.from(table).select('*', { count: 'exact', head: true })
+                
+                html += `
+                    <div class="col-md-4">
+                        <div class="metric-card">
+                            <div class="metric-label">${label}</div>
+                            <div class="metric-value">${count || 0}</div>
+                        </div>
+                    </div>
+                `
+            }
+            
+            html += '</div>'
+            section.innerHTML += html
+            resultsDiv.appendChild(section)
+        }
+
+        async function checkHospitals() {
+            const section = createSection('3. Détails des Hôpitaux')
+            
+            const { data: hospitals, error } = await supabase
+                .from('hospitals')
+                .select('*')
+                .order('created_at', { ascending: false })
+            
+            if (error) {
+                section.innerHTML += `<div class="alert alert-danger">${error.message}</div>`
+                resultsDiv.appendChild(section)
+                return
+            }
+            
+            if (!hospitals || hospitals.length === 0) {
+                section.innerHTML += '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Aucun hôpital enregistré</div>'
+                resultsDiv.appendChild(section)
+                return
+            }
+            
+            let html = '<table class="table table-striped"><thead><tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Statut</th><th>Géolocalisation</th><th>Note</th></tr></thead><tbody>'
+            
+            for (const h of hospitals) {
+                const statusClass = h.status === 'approved' ? 'status-ok' : h.status === 'pending' ? 'status-warning' : 'status-error'
+                const geoStatus = h.location ? '<span class="status-ok"><i class="bi bi-check-circle"></i></span>' : '<span class="status-error"><i class="bi bi-x-circle"></i></span>'
+                
+                html += `
+                    <tr>
+                        <td>${h.name}</td>
+                        <td>${h.email}</td>
+                        <td>${h.phone || '-'}</td>
+                        <td class="${statusClass}">${h.status}</td>
+                        <td>${geoStatus}</td>
+                        <td><i class="bi bi-star-fill text-warning"></i> ${h.average_rating || 0}</td>
+                    </tr>
+                `
+            }
+            
+            html += '</tbody></table>'
+            section.innerHTML += html
+            resultsDiv.appendChild(section)
+        }
+
+        async function checkServices() {
+            const section = createSection('4. Services par Hôpital')
+            
+            const { data: hospitals } = await supabase.from('hospitals').select('id, name')
+            
+            if (!hospitals || hospitals.length === 0) {
+                section.innerHTML += '<div class="alert alert-info">Aucun hôpital pour vérifier les services</div>'
+                resultsDiv.appendChild(section)
+                return
+            }
+            
+            let html = '<table class="table"><thead><tr><th>Hôpital</th><th>Nb Services</th><th>Services</th></tr></thead><tbody>'
+            
+            for (const h of hospitals) {
+                const { data: services } = await supabase
+                    .from('hospital_services')
+                    .select('service_id, services(name)')
+                    .eq('hospital_id', h.id)
+                
+                const serviceNames = services?.map(s => s.services.name).join(', ') || '-'
+                const count = services?.length || 0
+                const statusClass = count > 0 ? 'status-ok' : 'status-warning'
+                
+                html += `
+                    <tr>
+                        <td>${h.name}</td>
+                        <td class="${statusClass}">${count}</td>
+                        <td>${serviceNames}</td>
+                    </tr>
+                `
+            }
+            
+            html += '</tbody></table>'
+            section.innerHTML += html
+            resultsDiv.appendChild(section)
+        }
+
+        async function checkUsers() {
+            const section = createSection('5. Comptes Utilisateurs')
+            
+            const { data: profiles } = await supabase
+                .from('profiles')
+                .select('id, full_name, email, role, created_at')
+                .order('created_at', { ascending: false })
+            
+            if (!profiles || profiles.length === 0) {
+                section.innerHTML += '<div class="alert alert-warning">Aucun utilisateur</div>'
+                resultsDiv.appendChild(section)
+                return
+            }
+            
+            let html = '<table class="table"><thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Hôpital</th><th>Date Création</th></tr></thead><tbody>'
+            
+            for (const p of profiles) {
+                const { data: hospital } = await supabase
+                    .from('hospitals')
+                    .select('name')
+                    .eq('owner_id', p.id)
+                    .maybeSingle()
+                
+                const hospitalStatus = hospital 
+                    ? `<span class="status-ok"><i class="bi bi-check-circle"></i> ${hospital.name}</span>`
+                    : '<span class="status-error"><i class="bi bi-x-circle"></i> Aucun</span>'
+                
+                html += `
+                    <tr>
+                        <td>${p.full_name || '-'}</td>
+                        <td>${p.email}</td>
+                        <td><span class="badge bg-primary">${p.role}</span></td>
+                        <td>${hospitalStatus}</td>
+                        <td>${new Date(p.created_at).toLocaleDateString('fr-FR')}</td>
+                    </tr>
+                `
+            }
+            
+            html += '</tbody></table>'
+            section.innerHTML += html
+            resultsDiv.appendChild(section)
+        }
+
+        async function checkGeolocations() {
+            const section = createSection('6. Géolocalisations')
+            
+            const { data: hospitals } = await supabase
+                .from('hospitals')
+                .select('name, location')
+            
+            if (!hospitals || hospitals.length === 0) {
+                section.innerHTML += '<div class="alert alert-info">Aucun hôpital</div>'
+                resultsDiv.appendChild(section)
+                return
+            }
+            
+            let html = '<table class="table"><thead><tr><th>Hôpital</th><th>Coordonnées</th><th>Status</th></tr></thead><tbody>'
+            
+            for (const h of hospitals) {
+                if (h.location && h.location.coordinates) {
+                    const [lng, lat] = h.location.coordinates
+                    html += `
+                        <tr>
+                            <td>${h.name}</td>
+                            <td>Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}</td>
+                            <td class="status-ok"><i class="bi bi-check-circle"></i> Valide</td>
+                        </tr>
+                    `
+                } else {
+                    html += `
+                        <tr>
+                            <td>${h.name}</td>
+                            <td>-</td>
+                            <td class="status-error"><i class="bi bi-x-circle"></i> Manquante</td>
+                        </tr>
+                    `
+                }
+            }
+            
+            html += '</tbody></table>'
+            section.innerHTML += html
+            resultsDiv.appendChild(section)
+        }
+
+        async function diagnoseIssues() {
+            const section = createSection('7. Diagnostic de Problèmes')
+            
+            const issues = []
+            
+            // Comptes sans hôpital
+            const { data: profilesWithoutHospitals } = await supabase
+                .from('profiles')
+                .select('email, id')
+                .eq('role', 'hospital_admin')
+            
+            if (profilesWithoutHospitals) {
+                for (const p of profilesWithoutHospitals) {
+                    const { data: hospital } = await supabase
+                        .from('hospitals')
+                        .select('id')
+                        .eq('owner_id', p.id)
+                        .maybeSingle()
+                    
+                    if (!hospital) {
+                        issues.push({
+                            type: 'error',
+                            title: 'Compte sans hôpital',
+                            description: `${p.email} n'a pas d'hôpital associé`
+                        })
+                    }
+                }
+            }
+            
+            // Hôpitaux sans géolocalisation
+            const { data: hospitalsWithoutGeo } = await supabase
+                .from('hospitals')
+                .select('name')
+                .is('location', null)
+            
+            if (hospitalsWithoutGeo && hospitalsWithoutGeo.length > 0) {
+                hospitalsWithoutGeo.forEach(h => {
+                    issues.push({
+                        type: 'warning',
+                        title: 'Hôpital sans géolocalisation',
+                        description: `${h.name} n'a pas de coordonnées GPS`
+                    })
+                })
+            }
+            
+            // Hôpitaux sans services
+            const { data: hospitals } = await supabase.from('hospitals').select('id, name')
+            
+            if (hospitals) {
+                for (const h of hospitals) {
+                    const { count } = await supabase
+                        .from('hospital_services')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('hospital_id', h.id)
+                    
+                    if (count === 0) {
+                        issues.push({
+                            type: 'warning',
+                            title: 'Hôpital sans services',
+                            description: `${h.name} n'a aucun service médical configuré`
+                        })
+                    }
+                }
+            }
+            
+            if (issues.length === 0) {
+                section.innerHTML += '<div class="alert alert-success"><i class="bi bi-check-circle"></i> Aucun problème détecté!</div>'
+            } else {
+                let html = ''
+                issues.forEach(issue => {
+                    const alertClass = issue.type === 'error' ? 'alert-danger' : 'alert-warning'
+                    const icon = issue.type === 'error' ? 'x-circle' : 'exclamation-triangle'
+                    html += `
+                        <div class="alert ${alertClass}">
+                            <i class="bi bi-${icon} me-2"></i>
+                            <strong>${issue.title}:</strong> ${issue.description}
+                        </div>
+                    `
+                })
+                section.innerHTML += html
+            }
+            
+            resultsDiv.appendChild(section)
+        }
+
+        async function globalStats() {
+            const section = createSection('8. Statistiques Globales')
+            
+            // Compter tout
+            const { count: totalUsers } = await supabase.from('profiles').select('*', { count: 'exact', head: true })
+            const { count: totalHospitals } = await supabase.from('hospitals').select('*', { count: 'exact', head: true })
+            const { count: approvedHospitals } = await supabase.from('hospitals').select('*', { count: 'exact', head: true }).eq('status', 'approved')
+            const { count: pendingHospitals } = await supabase.from('hospitals').select('*', { count: 'exact', head: true }).eq('status', 'pending')
+            const { count: totalRatings } = await supabase.from('ratings').select('*', { count: 'exact', head: true })
+            
+            // Note moyenne
+            const { data: ratings } = await supabase.from('ratings').select('rating')
+            const avgRating = ratings && ratings.length > 0 
+                ? (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(2)
+                : '0.00'
+            
+            const html = `
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="metric-card">
+                            <div class="metric-label">Utilisateurs</div>
+                            <div class="metric-value">${totalUsers || 0}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card">
+                            <div class="metric-label">Hôpitaux Total</div>
+                            <div class="metric-value">${totalHospitals || 0}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card">
+                            <div class="metric-label">Approuvés</div>
+                            <div class="metric-value">${approvedHospitals || 0}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card">
+                            <div class="metric-label">En Attente</div>
+                            <div class="metric-value">${pendingHospitals || 0}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="metric-card">
+                            <div class="metric-label">Total Avis</div>
+                            <div class="metric-value">${totalRatings || 0}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="metric-card">
+                            <div class="metric-label">Note Moyenne</div>
+                            <div class="metric-value"><i class="bi bi-star-fill"></i> ${avgRating}</div>
+                        </div>
+                    </div>
+                </div>
+            `
+            
+            section.innerHTML += html
+            resultsDiv.appendChild(section)
+        }
+
+        function createSection(title) {
+            const section = document.createElement('div')
+            section.className = 'check-section'
+            section.innerHTML = `<h4 class="mb-3"><i class="bi bi-clipboard-check me-2"></i>${title}</h4>`
+            return section
+        }
+
+        // Event listener
+        btnCheck.addEventListener('click', runDiagnostic)
+    </script>
+</body>
+</html>
