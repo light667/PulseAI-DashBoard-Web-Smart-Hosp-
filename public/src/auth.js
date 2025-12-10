@@ -51,7 +51,8 @@ async function initAuth() {
 
             // Check for loop
             const loopCount = parseInt(sessionStorage.getItem('auth_loop_count') || '0');
-            if (loopCount > 2) {
+            // On augmente la tolérance à 5 pour les cas de liens email qui peuvent faire plusieurs sauts
+            if (loopCount > 5) {
                 console.warn('🛑 Boucle de redirection détectée. Arrêt.');
                 return;
             }

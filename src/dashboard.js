@@ -248,18 +248,25 @@ async function loadDashboardData() {
                 }
             } else {
                 // Vraiment aucun hôpital et pas de données en attente -> Redirection ou message
+                console.error('❌ Compte orphelin : User ID', state.user.id);
                 alert('Votre compte est actif mais aucun profil d\'hôpital n\'est associé. Veuillez contacter le support.');
                 return;
             }
         }
 
+        console.log('🏥 Hôpital chargé:', hospital);
         state.hospital = hospital;
 
         // Update UI Home
-        document.getElementById('hospitalNameDisplay').textContent = hospital.name;
-        document.getElementById('hospitalAddress').textContent = hospital.address;
-        document.getElementById('hospitalPhone').textContent = hospital.phone;
-        document.getElementById('hospitalStatus').textContent = hospital.status === 'approved' ? 'Validé' : 'En attente';
+        const elName = document.getElementById('hospitalNameDisplay');
+        const elAddr = document.getElementById('hospitalAddress');
+        const elPhone = document.getElementById('hospitalPhone');
+        const elStatus = document.getElementById('hospitalStatus');
+
+        if (elName) elName.textContent = hospital.name;
+        if (elAddr) elAddr.textContent = hospital.address;
+        if (elPhone) elPhone.textContent = hospital.phone;
+        if (elStatus) elStatus.textContent = hospital.status === 'approved' ? 'Validé' : 'En attente';
 
         // Update Settings Fields
         const settingsName = document.getElementById('settingsName');
@@ -279,6 +286,16 @@ async function loadDashboardData() {
     } catch (error) {
         console.error('Erreur chargement dashboard:', error);
         // Si pas d'hôpital trouvé, rediriger vers une page de création ou afficher un message
+        const loader = document.getElementById('loading-overlay');
+        if (loader) {
+            loader.innerHTML = `
+                <div class="text-center text-danger">
+                    <h3>Erreur de chargement</h3>
+                    <p>${error.message || 'Impossible de charger les données'}</p>
+                    <button class="btn btn-primary mt-3" onclick="window.location.reload()">Réessayer</button>
+                </div>
+            `;
+        }
     }
 }
 
