@@ -93,6 +93,7 @@ async function loadDashboardData() {
                 const data = JSON.parse(pendingData);
                 
                 // Préparation de la location en format WKT pour PostGIS
+                // Le format attendu est "POINT(lng lat)"
                 let locationWKT = null;
                 if (data.location && data.location.coordinates) {
                     const [lng, lat] = data.location.coordinates;
@@ -108,7 +109,7 @@ async function loadDashboardData() {
                         email: state.user.email,
                         phone: data.phone,
                         address: data.address,
-                        location: locationWKT,
+                        location: locationWKT, // Envoi du WKT
                         openings: data.openings,
                         status: 'pending'
                     })
