@@ -24,31 +24,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('🔗 Détection d\'un lien d\'authentification, attente du traitement...');
     }
 
+    // Fonction d'initialisation de la session (pour éviter la duplication)
+    const initSession = async (session) => {
+        console.log('✅ Session active:', session.user.email);
+        state.user = session.user;
+        
+        // Mise à jour UI
+        const userNameEl = document.getElementById('headerUserName');
+        if (userNameEl) userNameEl.textContent = state.user.email;
+        
+        const loader = document.getElementById('loading-overlay');
+        if (loader) loader.style.display = 'none';
+
+        // Initialisation des données si ce n'est pas déjà fait
+        if (!state.hospital) {
+            setupNavigation();
+            await loadDashboardData();
+        }
+    };
+
     // On utilise onAuthStateChange pour gérer la session de manière plus robuste
     supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('🔐 Auth State Change:', event);
         
         if (session) {
-            console.log('✅ Session active:', session.user.email);
-            state.user = session.user;
-            
-            // Mise à jour UI
-            const userNameEl = document.getElementById('headerUserName');
-            if (userNameEl) userNameEl.textContent = state.user.email;
-            
-            const loader = document.getElementById('loading-overlay');
-            if (loader) loader.style.display = 'none';
-
-            // Initialisation des données si ce n'est pas déjà fait
-            if (!state.hospital) {
-                setupNavigation();
-                await loadDashboardData();
-            }
+            await initSession(session);
         } else {
             // Si on est en train de traiter un lien auth, on ne redirige pas tout de suite
-            // On laisse une chance à Supabase de traiter le hash
             if (isAuthRedirect) {
                 console.log('⏳ Traitement du lien auth en cours, pas de redirection immédiate...');
+                return;
+            }
+
+            // DOUBLE VÉRIFICATION : Parfois onAuthStateChange(SIGNED_OUT) se déclenche au chargement
+            // alors qu'une session existe dans le storage (race condition).
+            const { data } = await supabase.auth.getSession();
+            if (data.session) {
+                console.log('⚠️ Faux positif de déconnexion, session trouvée via getSession');
+                await initSession(data.session);
                 return;
             }
 
