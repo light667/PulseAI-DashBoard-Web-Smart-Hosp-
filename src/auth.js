@@ -16,17 +16,25 @@ let selectedServices = [] // [1, 3, 5, ...] (IDs des services cochés)
 // ==============================================================================
 // INITIALISATION
 // ==============================================================================
-document.addEventListener('DOMContentLoaded', async () => {
+async function initAuth() {
     console.log('🚀 PulseAI Auth - Initialisation...')
     
-    // Charger les services disponibles
-    await loadServices()
-    
-    // Configurer les listeners
+    // 1. Configurer les listeners EN PREMIER (pour que les boutons marchent tout de suite)
     setupEventListeners()
     
+    // 2. Charger les données ensuite
+    await loadServices()
+    
     console.log('✅ Initialisation terminée')
-})
+}
+
+// Gérer le chargement du module (compatible avec defer/async/module)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAuth)
+} else {
+    // Si le DOM est déjà prêt (cas fréquent avec type="module")
+    initAuth()
+}
 
 // ==============================================================================
 // CHARGER LES SERVICES DEPUIS SUPABASE
