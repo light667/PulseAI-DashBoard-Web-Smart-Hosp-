@@ -52,7 +52,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialisation des données si ce n'est pas déjà fait
         if (!state.hospital) {
             setupNavigation();
-            await loadDashboardData();
+            try {
+                await loadDashboardData();
+            } catch (err) {
+                console.error('❌ Erreur critique chargement dashboard:', err);
+                // Ne pas bloquer l'UI, mais afficher une erreur
+                const loader = document.getElementById('loading-overlay');
+                if (loader) {
+                    loader.innerHTML = `
+                        <div class="text-center text-danger">
+                            <h3>Erreur de chargement</h3>
+                            <p>${err.message}</p>
+                            <button class="btn btn-primary mt-3" onclick="window.location.reload()">Réessayer</button>
+                        </div>
+                    `;
+                }
+            }
         }
     };
 
@@ -61,6 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('🔐 Auth State Change:', event);
         
         if (session) {
+            // Si on a une session, on initialise TOUJOURS, même si event est SIGNED_IN ou TOKEN_REFRESHED
             await initSession(session);
         } else {
             // Si on est en train de traiter un lien auth, on ne redirige pas tout de suite
@@ -78,20 +94,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
+            // Si vraiment pas de session, on redirige
             console.warn('⛔ Pas de session, redirection vers index.html');
-            
-            // Au lieu de rediriger brutalement, on affiche un message pour casser la boucle
-            // si jamais auth.js décide de nous renvoyer ici.
-            document.body.innerHTML = `
-                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center;">
-                    <h2 style="color:#dc3545;">Session expirée ou invalide</h2>
-                    <p>Nous ne parvenons pas à récupérer vos informations de connexion.</p>
-                    <button onclick="window.location.href='index.html'" style="padding:10px 20px;background:#0d6efd;color:white;border:none;border-radius:5px;cursor:pointer;font-size:16px;">
-                        Retourner à la connexion
-                    </button>
-                </div>
-            `;
-            // window.location.href = 'index.html'; // Désactivé pour éviter la boucle infinie
+            window.location.href = 'index.html';
         }
     });
 });
@@ -133,10 +138,25 @@ function setupNavigation() {
     });
 
     // Logout
-    document.getElementById('btnLogout').addEventListener('click', async () => {
-        await supabase.auth.signOut();
-        window.location.href = 'index.html';
-    });
+    const btnLogout = document.getElementById('btnLogout');
+    if (btnLogout) {
+        btnLogout.addEventListener('click', async (e) => {
+            e.preventDefault();
+            console.log('🚪 Déconnexion en cours...');
+            try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                console.log('✅ Déconnecté avec succès');
+                window.location.href = 'index.html';
+            } catch (err) {
+                console.error('❌ Erreur lors de la déconnexion:', err);
+                // Force redirect anyway
+                window.location.href = 'index.html';
+            }
+        });
+    } else {
+        console.error('❌ Bouton de déconnexion non trouvé !');
+    }
 }
 
 // ==============================================================================
