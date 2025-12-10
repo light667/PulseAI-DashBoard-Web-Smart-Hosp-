@@ -1,345 +1,364 @@
-// dashboard.js — Interface complète de gestion hospitalière
-import { supabase } from './supabase.js'
+import { supabase } from './supabase.js';
+import { api } from './utils/api.js'; // Assurez-vous que api.js exporte une instance par défaut ou nommée correctement
 
-// ==============================================================================
-// ÉTAT GLOBAL
-// ==============================================================================
-let currentUser = null
-let currentHospital = null
-let hospitalServices = []
+// État global du dashboard
+const state = {
+    user: null,
+    hospital: null,
+    services: [],
+    equipments: []
+};
 
 // ==============================================================================
 // INITIALISATION
 // ==============================================================================
-async function init() {
-    // Vérifier la session
-    const { data: { session } } = await supabase.auth.getSession()
-    currentUser = session?.user
-    
-    if (!currentUser) {
-        window.location.href = 'index.html'
-        return
+document.addEventListener('DOMContentLoaded', async () => {
+    await checkSession();
+    setupNavigation();
+    loadDashboardData();
+});
+
+async function checkSession() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+        window.location.href = 'index.html';
+        return;
     }
-    
-    // Charger les données de l'hôpital
-    await loadHospital()
-    
-    // Charger les services
-    await loadHospitalServices()
-    
-    // Mettre à jour les statistiques globales
-    updateGlobalStats()
-    
-    // Configurer les listeners
-    setupEventListeners()
+    state.user = session.user;
+    document.getElementById('headerUserName').textContent = state.user.email;
+    document.getElementById('loading-overlay').style.display = 'none';
 }
 
 // ==============================================================================
-// CHARGER L'HÔPITAL
+// NAVIGATION (SPA ROUTER)
 // ==============================================================================
-async function loadHospital() {
-    const { data, error } = await supabase
-        .from('hospitals')
-        .select('*')
-        .eq('owner_id', currentUser.id)
-        .maybeSingle()
-    
-    if (error) {
-        console.error('Erreur chargement hôpital:', error)
-        showAlert('Erreur de chargement des données: ' + error.message, 'danger')
-        return
-    }
-    
-    if (!data) {
-        console.warn('Aucun hôpital trouvé pour cet utilisateur')
-        showAlert('Aucun hôpital associé à ce compte. Redirection vers la configuration...', 'warning')
-        // Rediriger vers la page de réparation
-        setTimeout(() => {
-            window.location.href = 'fix-account.html'
-        }, 2000)
-        return
-    }
-    
-    currentHospital = data
-    
-    // Afficher les infos dans la navbar
-    document.getElementById('hospitalNameTitle').textContent = data.name
-    document.getElementById('userEmailDisplay').textContent = currentUser.email
-    
-    // Afficher le statut de validation
-    displayStatus(data.status, data.rejection_reason)
-    
-    // Remplir le formulaire de profil
-    document.getElementById('editName').value = data.name || ''
-    document.getElementById('editPhone').value = data.phone || ''
-    document.getElementById('editAddress').value = data.address || ''
-    
-    // Afficher la note moyenne
-    document.getElementById('averageRating').innerHTML = `
-        <i class="bi bi-star-fill"></i> ${data.average_rating || 0}
-    `
-    document.getElementById('totalRatings').textContent = data.total_ratings || 0
+function setupNavigation() {
+    const links = document.querySelectorAll('.nav-link[data-target]');
+    const sections = document.querySelectorAll('.content-section');
+    const pageTitle = document.getElementById('pageTitle');
+
+    links.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = link.getAttribute('data-target');
+            
+            // Update Active Link
+            links.forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+
+            // Update Section
+            sections.forEach(s => s.classList.remove('active'));
+            document.getElementById(targetId)?.classList.add('active');
+
+            // Update Title
+            const titleMap = {
+                'home': 'Tableau de bord',
+                'services': 'Gestion des Services',
+                'equipments': 'Parc d\'Équipements',
+                'patients': 'File d\'attente',
+                'settings': 'Paramètres'
+            };
+            pageTitle.textContent = titleMap[targetId] || 'PulseAI';
+        });
+    });
+
+    // Logout
+    document.getElementById('btnLogout').addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.href = 'index.html';
+    });
 }
 
 // ==============================================================================
-// AFFICHER LE STATUT DE VALIDATION
+// CHARGEMENT DES DONNÉES
 // ==============================================================================
-function displayStatus(status, rejectionReason) {
-    const badge = document.getElementById('hospitalStatusBadge')
-    const message = document.getElementById('statusMessage')
-    
-    switch (status) {
-        case 'pending':
-            badge.className = 'badge bg-warning text-dark fs-6 mb-2'
-            badge.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>EN ATTENTE DE VALIDATION'
-            message.textContent = 'Votre dossier est en cours d\'examen par notre équipe.'
-            break
-        case 'approved':
-            badge.className = 'badge bg-success fs-6 mb-2'
-            badge.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>ÉTABLISSEMENT VÉRIFIÉ'
-            message.textContent = 'Votre établissement est validé et visible dans l\'application Flutter.'
-            break
-        case 'rejected':
-            badge.className = 'badge bg-danger fs-6 mb-2'
-            badge.innerHTML = '<i class="bi bi-x-circle-fill me-2"></i>DOSSIER REJETÉ'
-            message.textContent = rejectionReason || 'Votre dossier a été rejeté. Contactez le support.'
-            break
+async function loadDashboardData() {
+    try {
+        // 1. Récupérer l'hôpital lié à l'utilisateur
+        const { data: hospital, error } = await supabase
+            .from('hospitals')
+            .select('*')
+            .eq('owner_id', state.user.id)
+            .single();
+
+        if (error) throw error;
+        state.hospital = hospital;
+
+        // Update UI Home
+        document.getElementById('hospitalNameDisplay').textContent = hospital.name;
+        document.getElementById('hospitalAddress').textContent = hospital.address;
+        document.getElementById('hospitalPhone').textContent = hospital.phone;
+        document.getElementById('hospitalStatus').textContent = hospital.status === 'approved' ? 'Validé' : 'En attente';
+
+        // 2. Charger les services
+        await loadServices();
+
+        // 3. Charger les équipements
+        await loadEquipments();
+
+    } catch (error) {
+        console.error('Erreur chargement dashboard:', error);
+        // Si pas d'hôpital trouvé, rediriger vers une page de création ou afficher un message
     }
 }
 
 // ==============================================================================
-// CHARGER LES SERVICES DE L'HÔPITAL
+// GESTION DES SERVICES
 // ==============================================================================
-async function loadHospitalServices() {
-    if (!currentHospital || !currentHospital.id) {
-        console.warn('Pas d\'hôpital chargé, impossible de charger les services')
-        hospitalServices = []
-        displayServices()
-        return
-    }
-    
+async function loadServices() {
     const { data, error } = await supabase
         .from('hospital_services')
         .select(`
             *,
-            services (id, name, icon)
+            services ( name, icon, category )
         `)
-        .eq('hospital_id', currentHospital.id)
-    
+        .eq('hospital_id', state.hospital.id);
+
     if (error) {
-        console.error('Erreur chargement services:', error)
-        return
+        console.error('Erreur services:', error);
+        return;
     }
-    
-    hospitalServices = data
-    displayServices()
+
+    state.services = data;
+    renderServices();
+    updateStats();
 }
 
-// ==============================================================================
-// AFFICHER LES SERVICES SOUS FORME DE CARTES
-// ==============================================================================
-function displayServices() {
-    const container = document.getElementById('servicesManagement')
-    
-    if (hospitalServices.length === 0) {
-        container.innerHTML = `
-            <div class="col-12 text-center text-muted py-4">
-                <i class="bi bi-info-circle fs-1"></i>
-                <p class="mt-2">Aucun service configuré lors de votre inscription.</p>
-                <p class="small">Contactez le support pour ajouter des services.</p>
-            </div>
-        `
-        return
-    }
-    
-    container.innerHTML = ''
-    
-    hospitalServices.forEach(hs => {
-        const card = document.createElement('div')
-        card.className = 'col-md-6'
+function renderServices() {
+    const grid = document.getElementById('servicesGrid');
+    grid.innerHTML = '';
+
+    state.services.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'col-md-6 col-lg-4';
         card.innerHTML = `
-            <div class="card service-card ${hs.is_active ? '' : 'inactive'} mb-3">
+            <div class="card service-card h-100 border-0 shadow-sm" onclick="window.openServiceDetails('${item.id}')">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <h6 class="mb-0">
-                            <i class="bi bi-${hs.services.icon || 'circle-fill'} me-2"></i>
-                            ${hs.services.name}
-                        </h6>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" ${hs.is_active ? 'checked' : ''} 
-                                   onchange="window.toggleService('${hs.id}', this.checked)">
-                            <label class="form-check-label small text-muted">Actif</label>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-light rounded p-3 me-3 text-primary">
+                            <i class="bi bi-${item.services.icon || 'hospital'} fs-4"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-1">${item.services.name}</h6>
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary">${item.services.category}</span>
                         </div>
                     </div>
-                    
-                    <!-- Stats Temps Réel -->
-                    <div class="row g-2">
-                        <!-- Médecins -->
+                    <div class="row g-2 text-center mt-3">
                         <div class="col-6">
-                            <label class="small text-muted">Médecins Total</label>
-                            <input type="number" class="form-control form-control-sm" min="0" 
-                                   value="${hs.doctors_total}" 
-                                   onchange="window.updateStat('${hs.id}', 'doctors_total', this.value)">
+                            <div class="border rounded p-2">
+                                <small class="text-muted d-block">Médecins</small>
+                                <span class="fw-bold text-primary">${item.active_doctors || 0}/${item.doctor_count || 0}</span>
+                            </div>
                         </div>
                         <div class="col-6">
-                            <label class="small text-muted">Disponibles</label>
-                            <input type="number" class="form-control form-control-sm" min="0" 
-                                   value="${hs.doctors_available}" 
-                                   onchange="window.updateStat('${hs.id}', 'doctors_available', this.value)">
-                        </div>
-                        
-                        <!-- Lits -->
-                        <div class="col-6">
-                            <label class="small text-muted">Lits Total</label>
-                            <input type="number" class="form-control form-control-sm" min="0" 
-                                   value="${hs.beds_total}" 
-                                   onchange="window.updateStat('${hs.id}', 'beds_total', this.value)">
-                        </div>
-                        <div class="col-6">
-                            <label class="small text-muted">Disponibles</label>
-                            <input type="number" class="form-control form-control-sm" min="0" 
-                                   value="${hs.beds_available}" 
-                                   onchange="window.updateStat('${hs.id}', 'beds_available', this.value)">
-                        </div>
-                        
-                        <!-- File d'attente -->
-                        <div class="col-12">
-                            <label class="small text-muted">File d'attente (personnes)</label>
-                            <input type="number" class="form-control form-control-sm" min="0" 
-                                   value="${hs.queue_length}" 
-                                   onchange="window.updateStat('${hs.id}', 'queue_length', this.value)">
+                            <div class="border rounded p-2">
+                                <small class="text-muted d-block">Attente</small>
+                                <span class="fw-bold ${getWaitColor(item.waiting_time_minutes)}">${item.waiting_time_minutes || 0} min</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        `
-        container.appendChild(card)
-    })
+        `;
+        grid.appendChild(card);
+    });
 }
 
-// ==============================================================================
-// METTRE À JOUR UNE STATISTIQUE
-// ==============================================================================
-window.updateStat = async function(serviceId, field, value) {
+function getWaitColor(minutes) {
+    if (!minutes) return 'text-success';
+    if (minutes < 30) return 'text-success';
+    if (minutes < 60) return 'text-warning';
+    return 'text-danger';
+}
+
+// Exposer la fonction au scope global pour le onclick HTML
+window.openServiceDetails = (serviceId) => {
+    const service = state.services.find(s => s.id === serviceId);
+    if (!service) return;
+
+    document.getElementById('editServiceId').value = service.id;
+    document.getElementById('editDoctorCount').value = service.doctor_count || 0;
+    document.getElementById('editActiveDoctors').value = service.active_doctors || 0;
+    document.getElementById('editWaitingTime').value = service.waiting_time_minutes || 0;
+
+    const modal = new bootstrap.Modal(document.getElementById('serviceDetailsModal'));
+    modal.show();
+};
+
+window.saveServiceDetails = async () => {
+    const id = document.getElementById('editServiceId').value;
+    const updates = {
+        doctor_count: parseInt(document.getElementById('editDoctorCount').value),
+        active_doctors: parseInt(document.getElementById('editActiveDoctors').value),
+        waiting_time_minutes: parseInt(document.getElementById('editWaitingTime').value)
+    };
+
     const { error } = await supabase
         .from('hospital_services')
-        .update({ [field]: parseInt(value) || 0 })
-        .eq('id', serviceId)
-    
-    if (error) {
-        console.error('Erreur mise à jour:', error)
-        showAlert('Erreur lors de la mise à jour', 'danger')
-        return
-    }
-    
-    // Recharger et mettre à jour les stats globales
-    await loadHospitalServices()
-    updateGlobalStats()
-}
+        .update(updates)
+        .eq('id', id);
 
-// ==============================================================================
-// ACTIVER/DÉSACTIVER UN SERVICE
-// ==============================================================================
-window.toggleService = async function(serviceId, isActive) {
-    const { error } = await supabase
-        .from('hospital_services')
-        .update({ is_active: isActive })
-        .eq('id', serviceId)
-    
-    if (error) {
-        console.error('Erreur toggle service:', error)
-        showAlert('Erreur lors de la modification', 'danger')
-        return
-    }
-    
-    showAlert(isActive ? 'Service activé' : 'Service désactivé', 'success')
-    await loadHospitalServices()
-    updateGlobalStats()
-}
-
-// ==============================================================================
-// METTRE À JOUR LES STATS GLOBALES
-// ==============================================================================
-function updateGlobalStats() {
-    let totalDoctors = 0
-    let availableDoctors = 0
-    let availableBeds = 0
-    let totalQueue = 0
-    
-    hospitalServices.forEach(hs => {
-        totalDoctors += hs.doctors_total || 0
-        availableDoctors += hs.doctors_available || 0
-        availableBeds += hs.beds_available || 0
-        totalQueue += hs.queue_length || 0
-    })
-    
-    document.getElementById('totalDoctors').textContent = totalDoctors
-    document.getElementById('availableDoctors').textContent = availableDoctors
-    document.getElementById('availableBeds').textContent = availableBeds
-    document.getElementById('totalQueue').textContent = totalQueue
-}
-
-// ==============================================================================
-// EVENT LISTENERS
-// ==============================================================================
-function setupEventListeners() {
-    // SAUVEGARDER LE PROFIL
-    document.getElementById('btnSaveProfile')?.addEventListener('click', async () => {
-        const name = document.getElementById('editName').value.trim()
-        const phone = document.getElementById('editPhone').value.trim()
-        const address = document.getElementById('editAddress').value.trim()
-        
-        if (!name || !phone || !address) {
-            showAlert('Veuillez remplir tous les champs', 'warning')
-            return
-        }
-        
-        const { error } = await supabase
-            .from('hospitals')
-            .update({ name, phone, address })
-            .eq('id', currentHospital.id)
-        
-        if (error) {
-            console.error('Erreur sauvegarde:', error)
-            showAlert('Erreur lors de la sauvegarde', 'danger')
-            return
-        }
-        
-        showAlert('✅ Profil mis à jour avec succès', 'success')
-        await loadHospital()
-    })
-    
-    // DÉCONNEXION
-    const logoutBtn = document.getElementById('btnLogout')
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async (e) => {
-            e.preventDefault()
-            console.log('Déconnexion...')
-            await supabase.auth.signOut()
-            window.location.href = 'index.html'
-        })
+    if (!error) {
+        // Fermer modal et recharger
+        const el = document.getElementById('serviceDetailsModal');
+        const modal = bootstrap.Modal.getInstance(el);
+        modal.hide();
+        loadServices(); // Recharger pour mettre à jour l'UI
     } else {
-        console.warn('Bouton btnLogout non trouvé dans le DOM')
+        alert('Erreur lors de la mise à jour');
     }
+};
+
+// ==============================================================================
+// GESTION DES ÉQUIPEMENTS
+// ==============================================================================
+async function loadEquipments() {
+    // Vérifier d'abord si la table existe (au cas où le script SQL n'a pas été joué)
+    const { data, error } = await supabase
+        .from('hospital_equipments')
+        .select('*')
+        .eq('hospital_id', state.hospital.id);
+
+    if (error) {
+        console.warn('Table équipements non trouvée ou vide', error);
+        return;
+    }
+
+    state.equipments = data;
+    renderEquipments();
+    updateStats();
+}
+
+function renderEquipments() {
+    const tbody = document.getElementById('equipmentsTableBody');
+    tbody.innerHTML = '';
+
+    if (state.equipments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Aucun équipement enregistré</td></tr>';
+        return;
+    }
+
+    state.equipments.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="ps-4 fw-medium">${item.name}</td>
+            <td><span class="badge bg-light text-dark border">${item.category || 'Général'}</span></td>
+            <td class="text-center">${item.total_quantity}</td>
+            <td class="text-center fw-bold">${item.available_quantity}</td>
+            <td>${getStatusBadge(item.status)}</td>
+            <td class="text-end pe-4">
+                <button class="btn btn-sm btn-light text-primary"><i class="bi bi-pencil"></i></button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function getStatusBadge(status) {
+    const map = {
+        'operational': '<span class="badge bg-success-subtle text-success">Opérationnel</span>',
+        'maintenance': '<span class="badge bg-warning-subtle text-warning">Maintenance</span>',
+        'broken': '<span class="badge bg-danger-subtle text-danger">Hors service</span>'
+    };
+    return map[status] || status;
 }
 
 // ==============================================================================
-// AFFICHER UNE ALERTE
+// STATS
 // ==============================================================================
-function showAlert(message, type = 'info') {
-    const alertZone = document.getElementById('alertZone')
-    const alert = document.createElement('div')
-    alert.className = `alert alert-${type} alert-dismissible fade show`
-    alert.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `
-    alertZone.appendChild(alert)
+function updateStats() {
+    document.getElementById('statServices').textContent = state.services.length;
     
-    setTimeout(() => alert.remove(), 5000)
+    // Calculer le total des médecins disponibles
+    const totalDoctors = state.services.reduce((acc, curr) => acc + (curr.active_doctors || 0), 0);
+    document.getElementById('statDoctors').textContent = totalDoctors;
+
+    document.getElementById('statEquipments').textContent = state.equipments.length;
 }
 
 // ==============================================================================
-// DÉMARRAGE
+// AJOUT DE SERVICES & ÉQUIPEMENTS
 // ==============================================================================
-init()
+
+// --- SERVICES ---
+window.showAddServiceModal = async () => {
+    const select = document.getElementById('newServiceSelect');
+    select.innerHTML = '<option>Chargement...</option>';
+    
+    const modal = new bootstrap.Modal(document.getElementById('addServiceModal'));
+    modal.show();
+
+    // Charger tous les services disponibles dans le système
+    const { data: allServices } = await supabase.from('services').select('*').eq('is_active', true);
+    
+    // Filtrer ceux déjà ajoutés
+    const existingIds = state.services.map(s => s.service_id);
+    const available = allServices.filter(s => !existingIds.includes(s.id));
+
+    select.innerHTML = '';
+    if (available.length === 0) {
+        select.innerHTML = '<option value="">Tous les services sont déjà ajoutés</option>';
+        return;
+    }
+
+    available.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = `${s.name} (${s.category})`;
+        select.appendChild(opt);
+    });
+};
+
+window.saveNewService = async () => {
+    const serviceId = document.getElementById('newServiceSelect').value;
+    const price = document.getElementById('newServicePrice').value;
+
+    if (!serviceId) return;
+
+    const { error } = await supabase.from('hospital_services').insert({
+        hospital_id: state.hospital.id,
+        service_id: serviceId,
+        consultation_price: price,
+        is_available: true
+    });
+
+    if (!error) {
+        bootstrap.Modal.getInstance(document.getElementById('addServiceModal')).hide();
+        loadServices();
+    } else {
+        alert('Erreur lors de l\'ajout du service');
+    }
+};
+
+// --- ÉQUIPEMENTS ---
+window.showAddEquipmentModal = () => {
+    document.getElementById('addEquipmentForm').reset();
+    const modal = new bootstrap.Modal(document.getElementById('addEquipmentModal'));
+    modal.show();
+};
+
+window.saveNewEquipment = async () => {
+    const data = {
+        hospital_id: state.hospital.id,
+        name: document.getElementById('newEquipName').value,
+        category: document.getElementById('newEquipCategory').value,
+        total_quantity: parseInt(document.getElementById('newEquipTotal').value),
+        available_quantity: parseInt(document.getElementById('newEquipAvailable').value),
+        status: document.getElementById('newEquipStatus').value
+    };
+
+    if (!data.name) {
+        alert('Le nom est requis');
+        return;
+    }
+
+    const { error } = await supabase.from('hospital_equipments').insert(data);
+
+    if (!error) {
+        bootstrap.Modal.getInstance(document.getElementById('addEquipmentModal')).hide();
+        loadEquipments();
+    } else {
+        console.error(error);
+        alert('Erreur lors de l\'ajout de l\'équipement');
+    }
+};

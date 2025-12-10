@@ -18,6 +18,14 @@ let selectedServices = [] // [1, 3, 5, ...] (IDs des services cochés)
 // ==============================================================================
 async function initAuth() {
     console.log('🚀 PulseAI Auth - Initialisation...')
+
+    // 0. Vérifier si déjà connecté (Redirection Dashboard)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+        console.log('✅ Session active détectée, redirection vers le dashboard...')
+        window.location.href = 'dashboard.html'
+        return
+    }
     
     // 1. Configurer les listeners EN PREMIER (pour que les boutons marchent tout de suite)
     setupEventListeners()
@@ -564,6 +572,21 @@ async function handleSignup() {
         }
         
         console.log('✅ Compte Auth créé:', authData.user.id)
+        
+        // VÉRIFICATION DE LA SESSION (Email Confirmation)
+        if (!authData.session) {
+            console.warn('⚠️ Pas de session active (Email confirmation requise ?)')
+            loader.update('Compte créé ! Veuillez vérifier vos emails pour valider le compte.', 'success')
+            notify.info('Un email de confirmation a été envoyé à ' + formData.email)
+            
+            // On ne peut pas créer l'hôpital via l'API sans session
+            // On arrête ici proprement
+            setTimeout(() => {
+                window.location.href = 'index.html'
+            }, 3000)
+            return
+        }
+
         loader.update('Compte créé! Configuration de l\'hôpital...', 'info')
         
         // 2. CRÉER L'HÔPITAL
