@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Connexion Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0f0; }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+        .info { color: #ff0; }
+        button { padding: 10px 20px; margin: 10px 5px; font-size: 16px; cursor: pointer; }
+        #log { white-space: pre-wrap; background: #000; padding: 15px; border-radius: 5px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 TEST CONNEXION SUPABASE</h1>
+    
+    <button onclick="testConnection()">1. Test Connexion</button>
+    <button onclick="testDatabase()">2. Test Tables</button>
+    <button onclick="testAuth()">3. Test Auth</button>
+    <button onclick="testFormData()">4. Test Données Formulaire</button>
+    <button onclick="clearLog()">Effacer</button>
+    
+    <div id="log"></div>
+
+    <script type="module">
+        import { SUPABASE_CONFIG } from './src/config.js';
+        
+        const { createClient } = window.supabase;
+        const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+        
+        window.supabaseClient = supabase;
+        
+        function log(msg, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<span class="${type}">[${timestamp}] ${msg}</span>\n`;
+            console.log(msg);
+        }
+        
+        window.clearLog = () => {
+            document.getElementById('log').innerHTML = '';
+        };
+        
+        window.testConnection = async () => {
+            log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+            log('TEST 1: CONNEXION SUPABASE', 'info');
+            log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+            
+            try {
+                log('URL: ' + SUPABASE_CONFIG.url, 'info');
+                log('Client créé: ' + (supabase ? 'OUI ✓' : 'NON ✗'), supabase ? 'success' : 'error');
+                
+                // Test ping
+                const { data, error } = await supabase.from('profiles').select('count').limit(1);
+                
+                if (error) {
+                    log('ERREUR: ' + error.message, 'error');
+                } else {
+                    log('✓ Connexion réussie!', 'success');
+                }
+            } catch (err) {
+                log('ERREUR CRITIQUE: ' + err.message, 'error');
+            }
+        };
+        
+        window.testDatabase = async () => {
+            log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+            log('TEST 2: TABLES BASE DE DONNÉES', 'info');
+            log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+            
+            const tables = ['profiles', 'hospitals', 'services', 'hospital_services', 'ratings'];
+            
+            for (const table of tables) {
+                try {
+                    const { data, error } = await supabase.from(table).select('*').limit(1);
+                    
+                    if (error) {
+                        log(`✗ Table "${table}": ${error.message}`, 'error');
+                    } else {
+                        log(`✓ Table "${table}": OK`, 'success');
+                    }
+                } catch (err) {
+                    log(`✗ Table "${table}": ${err.message}`, 'error');
+                }
+            }
+        };
+        
+        window.testAuth = async () => {
+            log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+            log('TEST 3: AUTHENTIFICATION', 'info');
+            log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+            
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (session) {
+                    log('✓ Session active: ' + session.user.email, 'success');
+                    log('  User ID: ' + session.user.id, 'info');
+                    log('  Role: ' + (session.user.user_metadata?.role || 'N/A'), 'info');
+                } else {
+                    log('✓ Pas de session active (normal pour nouvel utilisateur)', 'info');
+                }
+                
+                // Test signup
+                const testEmail = 'test_' + Date.now() + '@example.com';
+                log('Test création compte: ' + testEmail, 'info');
+                
+                const { data, error } = await supabase.auth.signUp({
+                    email: testEmail,
+                    password: 'Test123456',
+                    options: {
+                        data: {
+                            full_name: 'Test Hospital',
+                            role: 'hospital_admin'
+                        }
+                    }
+                });
+                
+                if (error) {
+                    log('✗ Erreur signup: ' + error.message, 'error');
+                } else {
+                    log('✓ Signup test réussi!', 'success');
+                    log('  User créé: ' + data.user.id, 'success');
+                    
+                    // Supprimer le compte test
+                    await supabase.auth.signOut();
+                }
+            } catch (err) {
+                log('ERREUR: ' + err.message, 'error');
+            }
+        };
+        
+        window.testFormData = () => {
+            log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+            log('TEST 4: DONNÉES FORMULAIRE INDEX.HTML', 'info');
+            log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+            
+            // Ouvrir index.html dans nouvel onglet
+            window.open('/public/index.html', '_blank');
+            log('✓ Ouverture index.html dans nouvel onglet', 'success');
+            log('  Remplissez le formulaire et cliquez "Créer mon compte"', 'info');
+            log('  Vérifiez la console du nouvel onglet pour les logs', 'info');
+        };
+        
+        // Auto-test au chargement
+        log('Page de test chargée', 'success');
+        log('Cliquez sur les boutons pour tester', 'info');
+    </script>
+</body>
+</html>

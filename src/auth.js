@@ -386,6 +386,8 @@ async function handleLogin() {
 // SIGNUP COMPLET
 // ==============================================================================
 async function handleSignup() {
+    console.log('🔥 handleSignup() appelée!')
+    
     // VALIDATION
     clearFormErrors()
     
@@ -396,6 +398,8 @@ async function handleSignup() {
         phone: document.getElementById('signupPhone').value.trim(),
         address: document.getElementById('signupAddress').value.trim()
     }
+    
+    console.log('📋 Données du formulaire:', formData)
     
     // Règles de validation
     const rules = {
@@ -421,8 +425,8 @@ async function handleSignup() {
         },
         address: {
             required: true,
-            minLength: 10,
-            message: 'Adresse trop courte (minimum 10 caractères)'
+            minLength: 5,
+            message: 'Adresse trop courte (minimum 5 caractères - Ville, Pays)'
         }
     }
     

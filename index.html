@@ -56,7 +56,7 @@
                     <h3 class="mb-3">Inscription Hôpital</h3>
                     <p class="text-muted small">Remplissez tous les champs pour rejoindre le réseau PulseAI</p>
                     
-                    <form id="signupForm" onsubmit="event.preventDefault();">
+                    <form id="signupForm">
                         
                         <!-- ÉTAPE 1 : Compte -->
                         <div class="signup-step active" id="step1">
@@ -243,8 +243,8 @@ function nextStep(stepNumber) {
             return;
         }
         
-        if (!address || address.length < 10) {
-            alert('⚠️ Veuillez entrer l\'adresse complète de votre établissement');
+        if (!address || address.length < 5) {
+            alert('⚠️ Veuillez entrer au minimum la ville et le pays');
             const addressField = document.getElementById('signupAddress');
             if (addressField) addressField.focus();
             return;
