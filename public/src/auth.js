@@ -133,11 +133,15 @@ function setupEventListeners() {
         console.log('✓ Écouteur LOGIN configuré')
     }
     
-    // SIGNUP
-    const btnSignup = document.getElementById('btnSignup')
-    if (btnSignup) {
-        btnSignup.addEventListener('click', handleSignup)
-        console.log('✓ Écouteur SIGNUP configuré')
+    // SIGNUP - Écouter le SUBMIT du formulaire, pas le click du bouton
+    const signupForm = document.getElementById('signupForm')
+    if (signupForm) {
+        signupForm.addEventListener('submit', (e) => {
+            e.preventDefault()
+            console.log('📝 Formulaire d\'inscription soumis!')
+            handleSignup()
+        })
+        console.log('✓ Écouteur SIGNUP (submit) configuré')
     }
     
     // LOGOUT
@@ -455,10 +459,18 @@ async function handleSignup() {
     spinner.classList.remove('d-none')
     btn.disabled = true
     
+    console.log('🚀 Début de l\'inscription...')
+    console.log('📧 Email:', formData.email)
+    console.log('🏥 Hôpital:', formData.hospitalName)
+    console.log('📍 Location:', userLocation)
+    console.log('🕒 Horaires:', openings)
+    console.log('🏥 Services sélectionnés:', selectedServices)
+    
     const loader = notify.loading('Création du compte en cours...')
     
     try {
         // 1. CRÉER LE COMPTE AUTH
+        console.log('1️⃣ Création du compte Auth...')
         const { data: authData, error: authError } = await supabase.auth.signUp({
             email: formData.email,
             password: formData.password,
@@ -471,15 +483,19 @@ async function handleSignup() {
             }
         })
         
+        console.log('Auth Response:', { authData, authError })
+        
         if (authError) throw authError
         
         if (!authData.user) {
             throw new Error('Erreur lors de la création du compte')
         }
         
+        console.log('✅ Compte Auth créé:', authData.user.id)
         loader.update('Compte créé! Configuration de l\'hôpital...', 'info')
         
         // 2. CRÉER L'HÔPITAL
+        console.log('2️⃣ Création de l\'hôpital...')
         const hospitalData = {
             owner_id: authData.user.id,
             name: formData.hospitalName,
@@ -494,17 +510,30 @@ async function handleSignup() {
             status: 'pending'
         }
         
+        console.log('Hospital Data:', hospitalData)
+        
         const { data: hospital, error: hospitalError } = await api.createHospital(hospitalData)
+        
+        console.log('Hospital Response:', { hospital, hospitalError })
         
         if (hospitalError) throw hospitalError
         
+        if (!hospital) {
+            throw new Error('Erreur: hôpital non créé')
+        }
+        
+        console.log('✅ Hôpital créé:', hospital.id)
         loader.update('Hôpital créé! Ajout des services...', 'info')
         
         // 3. AJOUTER LES SERVICES
+        console.log('3️⃣ Ajout des services...')
         for (const serviceId of selectedServices) {
-            await api.upsertHospitalService(hospital.id, serviceId)
+            console.log(`Ajout service ${serviceId}...`)
+            const result = await api.upsertHospitalService(hospital.id, serviceId)
+            console.log(`Service ${serviceId} ajouté:`, result)
         }
         
+        console.log('✅ Tous les services ajoutés')
         loader.update('✅ Inscription réussie! Redirection...', 'success')
         
         // Nettoyer le cache

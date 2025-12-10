@@ -52,9 +52,11 @@ async function loadHospital() {
     
     if (!data) {
         console.warn('Aucun hôpital trouvé pour cet utilisateur')
-        showAlert('Aucun hôpital associé à ce compte. Veuillez vous réinscrire.', 'warning')
-        // Créer un hôpital vide pour éviter les crashes
-        currentHospital = { id: null, name: 'Non configuré', status: 'pending' }
+        showAlert('Aucun hôpital associé à ce compte. Redirection vers la configuration...', 'warning')
+        // Rediriger vers la page de réparation
+        setTimeout(() => {
+            window.location.href = 'fix-account.html'
+        }, 2000)
         return
     }
     
