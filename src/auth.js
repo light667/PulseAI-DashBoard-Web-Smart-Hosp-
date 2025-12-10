@@ -151,23 +151,33 @@ function setupEventListeners() {
             e.preventDefault()
             console.log('📝 Formulaire d\'inscription soumis!')
             
-            // Afficher le spinner immédiatement pour montrer que ça charge
+            // Debug des éléments
             const spinner = document.getElementById('signupSpinner')
             const btn = document.getElementById('btnSignup')
-            if (spinner) spinner.classList.remove('d-none')
-            if (btn) btn.disabled = true
+            console.log('Elements trouvés:', { spinner: !!spinner, btn: !!btn })
             
-            // Petit délai pour laisser le DOM se mettre à jour
-            setTimeout(() => {
-                try {
-                    handleSignup()
-                } catch (err) {
-                    console.error('CRASH handleSignup:', err)
-                    if (spinner) spinner.classList.add('d-none')
-                    if (btn) btn.disabled = false
-                    alert('Erreur interne: ' + err.message)
-                }
-            }, 50)
+            // Afficher le spinner immédiatement
+            if (spinner) {
+                spinner.classList.remove('d-none')
+                console.log('Spinner affiché')
+            }
+            if (btn) {
+                btn.disabled = true
+                console.log('Bouton désactivé')
+            }
+            
+            console.log('Appel de handleSignup dans 10ms...')
+            
+            // Appel direct pour tester (sans timeout pour l'instant pour voir si ça bloque)
+            try {
+                console.log('Type de handleSignup:', typeof handleSignup)
+                handleSignup()
+            } catch (err) {
+                console.error('CRASH handleSignup immédiat:', err)
+                if (spinner) spinner.classList.add('d-none')
+                if (btn) btn.disabled = false
+                alert('Erreur interne: ' + err.message)
+            }
         })
         console.log('✓ Écouteur SIGNUP (submit) configuré')
     }
