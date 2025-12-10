@@ -1,5 +1,6 @@
 [build]
-  # Pas de build nécessaire - site statique
+  # Script de build pour copier les fichiers JS
+  command = "chmod +x build.sh && ./build.sh"
   publish = "public"
   
 [build.environment]
