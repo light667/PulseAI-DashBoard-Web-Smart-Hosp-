@@ -13,8 +13,18 @@ const state = {
 // INITIALISATION
 // ==============================================================================
 document.addEventListener('DOMContentLoaded', async () => {
+    // Vérifier si on est en train de traiter un lien magique ou une confirmation
+    const isAuthRedirect = window.location.hash && (
+        window.location.hash.includes('access_token') || 
+        window.location.hash.includes('type=signup') || 
+        window.location.hash.includes('type=recovery')
+    );
+
+    if (isAuthRedirect) {
+        console.log('🔗 Détection d\'un lien d\'authentification, attente du traitement...');
+    }
+
     // On utilise onAuthStateChange pour gérer la session de manière plus robuste
-    // Cela évite les race conditions où getSession() pourrait retourner null au chargement
     supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('🔐 Auth State Change:', event);
         
@@ -35,6 +45,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await loadDashboardData();
             }
         } else {
+            // Si on est en train de traiter un lien auth, on ne redirige pas tout de suite
+            // On laisse une chance à Supabase de traiter le hash
+            if (isAuthRedirect) {
+                console.log('⏳ Traitement du lien auth en cours, pas de redirection immédiate...');
+                return;
+            }
+
             console.warn('⛔ Pas de session, redirection vers index.html');
             window.location.href = 'index.html';
         }
