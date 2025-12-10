@@ -17,11 +17,15 @@ let selectedServices = [] // [1, 3, 5, ...] (IDs des services cochés)
 // INITIALISATION
 // ==============================================================================
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 PulseAI Auth - Initialisation...')
+    
     // Charger les services disponibles
     await loadServices()
     
     // Configurer les listeners
     setupEventListeners()
+    
+    console.log('✅ Initialisation terminée')
 })
 
 // ==============================================================================
@@ -88,46 +92,87 @@ async function loadServices() {
 // EVENT LISTENERS
 // ==============================================================================
 function setupEventListeners() {
-    // GÉOLOCALISATION
-    const btnLocation = document.getElementById('btnGetLocation')
-    if (btnLocation) {
-        btnLocation.addEventListener('click', handleGeolocation)
-    } else {
-        console.warn('Bouton de géolocalisation non trouvé')
-    }
+    console.log('⚙️ Configuration des écouteurs d\'événements...')
     
-    // AJOUT D'HORAIRE
-    const btnAddOpening = document.getElementById('btnAddOpening')
-    if (btnAddOpening) {
-        btnAddOpening.addEventListener('click', handleAddOpening)
-    } else {
-        console.warn('Bouton d\'ajout d\'horaire non trouvé')
-    }
+    // GÉOLOCALISATION - Utilisation de délégation d'événements
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'btnGetLocation') {
+            e.preventDefault()
+            console.log('🎯 Bouton géolocalisation cliqué!')
+            handleGeolocation()
+        }
+        
+        // Gérer aussi le clic sur l'icône à l'intérieur du bouton
+        if (e.target && e.target.closest('#btnGetLocation')) {
+            e.preventDefault()
+            console.log('🎯 Bouton géolocalisation cliqué (via icône)!')
+            handleGeolocation()
+        }
+    })
+    
+    // AJOUT D'HORAIRE - Utilisation de délégation d'événements
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'btnAddOpening') {
+            e.preventDefault()
+            console.log('➕ Bouton ajout horaire cliqué!')
+            handleAddOpening()
+        }
+        
+        // Gérer aussi le clic sur l'icône à l'intérieur du bouton
+        if (e.target && e.target.closest('#btnAddOpening')) {
+            e.preventDefault()
+            console.log('➕ Bouton ajout horaire cliqué (via icône)!')
+            handleAddOpening()
+        }
+    })
     
     // LOGIN
-    document.getElementById('btnLogin')?.addEventListener('click', handleLogin)
+    const btnLogin = document.getElementById('btnLogin')
+    if (btnLogin) {
+        btnLogin.addEventListener('click', handleLogin)
+        console.log('✓ Écouteur LOGIN configuré')
+    }
     
     // SIGNUP
-    document.getElementById('btnSignup')?.addEventListener('click', handleSignup)
+    const btnSignup = document.getElementById('btnSignup')
+    if (btnSignup) {
+        btnSignup.addEventListener('click', handleSignup)
+        console.log('✓ Écouteur SIGNUP configuré')
+    }
     
     // LOGOUT
-    document.getElementById('btnLogout')?.addEventListener('click', async () => {
-        await supabase.auth.signOut()
-        window.location.reload()
-    })
+    const btnLogout = document.getElementById('btnLogout')
+    if (btnLogout) {
+        btnLogout.addEventListener('click', async () => {
+            await supabase.auth.signOut()
+            window.location.reload()
+        })
+        console.log('✓ Écouteur LOGOUT configuré')
+    }
+    
+    console.log('✅ Tous les écouteurs configurés')
 }
 
 // ==============================================================================
 // GÉOLOCALISATION
 // ==============================================================================
 function handleGeolocation() {
+    console.log('📍 handleGeolocation appelée')
+    
     if (!navigator.geolocation) {
+        console.error('❌ Géolocalisation non supportée')
         notify.error('La géolocalisation n\'est pas disponible sur votre navigateur')
+        alert('Votre navigateur ne supporte pas la géolocalisation')
         return
     }
     
+    console.log('✓ Navigator.geolocation disponible')
+    
     const btn = document.getElementById('btnGetLocation')
     const statusInput = document.getElementById('locationStatus')
+    
+    console.log('Bouton:', btn)
+    console.log('Input status:', statusInput)
     
     // Désactiver le bouton pendant le chargement
     if (btn) {
@@ -136,13 +181,18 @@ function handleGeolocation() {
     }
     
     notify.info('Demande de localisation en cours...')
+    console.log('🔍 Appel de getCurrentPosition...')
     
     navigator.geolocation.getCurrentPosition(
         (position) => {
+            console.log('✅ Position obtenue:', position.coords)
+            
             userLocation = {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude
             }
+            
+            console.log('📍 userLocation:', userLocation)
             
             if (statusInput) {
                 statusInput.value = `📍 ${userLocation.lat.toFixed(6)}, ${userLocation.lng.toFixed(6)}`
@@ -157,23 +207,30 @@ function handleGeolocation() {
             }
             
             notify.success('Position détectée avec succès!')
+            console.log('✅ Géolocalisation réussie')
         },
         (error) => {
+            console.error('❌ Erreur géolocalisation:', error)
+            
             let errorMessage = 'Impossible d\'obtenir votre position'
             
             switch(error.code) {
                 case error.PERMISSION_DENIED:
                     errorMessage = 'Vous avez refusé l\'accès à votre position. Veuillez autoriser la géolocalisation dans les paramètres de votre navigateur.'
+                    console.error('Permission refusée')
                     break
                 case error.POSITION_UNAVAILABLE:
                     errorMessage = 'Position indisponible. Vérifiez votre connexion GPS.'
+                    console.error('Position indisponible')
                     break
                 case error.TIMEOUT:
                     errorMessage = 'La demande de position a expiré. Réessayez.'
+                    console.error('Timeout')
                     break
             }
             
             notify.error(errorMessage)
+            alert(errorMessage)
             
             if (btn) {
                 btn.disabled = false
@@ -192,16 +249,26 @@ function handleGeolocation() {
 // AJOUT D'HORAIRE
 // ==============================================================================
 function handleAddOpening() {
+    console.log('➕ handleAddOpening appelée')
+    
     const daySelect = document.getElementById('daySelect')
     const timeRange = document.getElementById('timeRange')
     
+    console.log('daySelect:', daySelect)
+    console.log('timeRange:', timeRange)
+    
     if (!daySelect || !timeRange) {
+        console.error('❌ Éléments non trouvés')
         notify.error('Erreur: éléments de formulaire non trouvés')
+        alert('Erreur: éléments de formulaire non trouvés')
         return
     }
     
     const day = daySelect.value
     const range = timeRange.value
+    
+    console.log('Jour sélectionné:', day)
+    console.log('Horaire sélectionné:', range)
     
     // Vérifier si cette combinaison existe déjà
     const exists = openings.some(opening => 
@@ -209,13 +276,19 @@ function handleAddOpening() {
     )
     
     if (exists) {
+        console.warn('⚠️ Horaire déjà existant')
         notify.warning(`${day} ${range} est déjà ajouté`)
+        alert(`${day} ${range} est déjà ajouté`)
         return
     }
     
+    console.log('✓ Ajout de l\'horaire...')
     openings.push({ day, range })
+    console.log('Horaires actuels:', openings)
+    
     updateOpeningsList()
     notify.success(`${day} ${range} ajouté`)
+    console.log('✅ Horaire ajouté avec succès')
 }
 
 // ==============================================================================
