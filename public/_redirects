@@ -1,11 +1,17 @@
-# Redirections pour SPA
-/* /index.html 200
-
-# Forcer HTTPS
-http://pulseai-dashboard.netlify.app/* https://pulseai-dashboard.netlify.app/:splat 301!
-
-# Redirections spécifiques
+# Redirections spécifiques (doivent être avant la règle SPA générique)
 /admin /admin.html 200
 /dashboard /dashboard.html 200
 /profile /profile.html 200
+
+# Règle SPA générique (Catch-all)
+# Attention : cela peut masquer les fichiers statiques manquants (404 -> index.html)
+# On exclut explicitement les assets connus pour éviter les faux positifs
+/src/* /src/:splat 200
+/*.css /:splat 200
+/*.js /:splat 200
+/*.png /:splat 200
+/*.jpg /:splat 200
+
+# Fallback SPA
+/* /index.html 200
 /hospitals /hospitals.html 200
