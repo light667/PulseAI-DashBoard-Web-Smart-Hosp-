@@ -21,6 +21,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // GLOBAL LOGOUT LISTENER (Delegation)
+    document.body.addEventListener('click', async (e) => {
+        const btn = e.target.closest('#btnLogout');
+        if (btn) {
+            e.preventDefault();
+            console.log('🚪 Déconnexion demandée (Global Listener)...');
+            
+            try {
+                // 1. Sign out from Supabase
+                const { error } = await supabase.auth.signOut();
+                if (error) console.warn('Erreur Supabase signOut:', error);
+                
+                // 2. Clear Local Storage (Supabase tokens)
+                localStorage.clear(); // Radical mais efficace pour la déconnexion
+                sessionStorage.clear();
+                
+                console.log('✅ Déconnexion locale effectuée');
+                
+                // 3. Redirect
+                window.location.replace('index.html');
+            } catch (err) {
+                console.error('❌ Erreur critique déconnexion:', err);
+                window.location.replace('index.html');
+            }
+        }
+    });
+
     // Clear auth loop flag if we reached dashboard successfully
     if (sessionStorage.getItem('auth_loop_count')) {
         sessionStorage.removeItem('auth_loop_count');
