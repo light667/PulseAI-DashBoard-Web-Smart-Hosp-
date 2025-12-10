@@ -25,12 +25,17 @@ async function initAuth() {
     // 0. Vérifier si déjà connecté (Redirection Dashboard)
     // On ne bloque pas l'initialisation pour ça, mais on redirige si besoin
     try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session) {
-            console.log('✅ Session active détectée, redirection vers le dashboard...')
-            window.location.href = 'dashboard.html'
-            return
-        }
+        // Petit délai pour laisser le temps au client Supabase de s'initialiser correctement
+        // et éviter les boucles de redirection trop rapides
+        setTimeout(async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session) {
+                console.log('✅ Session active détectée, redirection vers le dashboard...')
+                // Vérification anti-boucle simple : si on vient juste d'être redirigé depuis le dashboard
+                // (difficile à détecter parfaitement sans paramètre, mais le délai aide)
+                window.location.href = 'dashboard.html'
+            }
+        }, 500);
     } catch (e) {
         console.warn('Erreur vérification session:', e)
     }

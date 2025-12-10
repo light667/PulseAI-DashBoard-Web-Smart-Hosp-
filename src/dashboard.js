@@ -13,21 +13,36 @@ const state = {
 // INITIALISATION
 // ==============================================================================
 document.addEventListener('DOMContentLoaded', async () => {
-    await checkSession();
-    setupNavigation();
-    loadDashboardData();
+    // On utilise onAuthStateChange pour gérer la session de manière plus robuste
+    // Cela évite les race conditions où getSession() pourrait retourner null au chargement
+    supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('🔐 Auth State Change:', event);
+        
+        if (session) {
+            console.log('✅ Session active:', session.user.email);
+            state.user = session.user;
+            
+            // Mise à jour UI
+            const userNameEl = document.getElementById('headerUserName');
+            if (userNameEl) userNameEl.textContent = state.user.email;
+            
+            const loader = document.getElementById('loading-overlay');
+            if (loader) loader.style.display = 'none';
+
+            // Initialisation des données si ce n'est pas déjà fait
+            if (!state.hospital) {
+                setupNavigation();
+                await loadDashboardData();
+            }
+        } else {
+            console.warn('⛔ Pas de session, redirection vers index.html');
+            window.location.href = 'index.html';
+        }
+    });
 });
 
-async function checkSession() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        window.location.href = 'index.html';
-        return;
-    }
-    state.user = session.user;
-    document.getElementById('headerUserName').textContent = state.user.email;
-    document.getElementById('loading-overlay').style.display = 'none';
-}
+// Ancienne fonction checkSession supprimée au profit de onAuthStateChange
+// async function checkSession() { ... }
 
 // ==============================================================================
 // NAVIGATION (SPA ROUTER)
