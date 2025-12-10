@@ -75,13 +75,61 @@ function setupNavigation() {
 async function loadDashboardData() {
     try {
         // 1. Récupérer l'hôpital lié à l'utilisateur
-        const { data: hospital, error } = await supabase
+        let { data: hospital, error } = await supabase
             .from('hospitals')
             .select('*')
             .eq('owner_id', state.user.id)
-            .single();
+            .maybeSingle(); // Utiliser maybeSingle pour éviter l'erreur 406/PGRST116 si 0 résultats
 
         if (error) throw error;
+
+        // CAS SPÉCIAL : Compte créé mais hôpital non finalisé (Email confirmation flow)
+        if (!hospital) {
+            console.warn('⚠️ Aucun hôpital trouvé. Vérification des données en attente...');
+            const pendingData = localStorage.getItem('pending_hospital_creation');
+            
+            if (pendingData) {
+                console.log('🔄 Finalisation de la création de l\'hôpital...');
+                const data = JSON.parse(pendingData);
+                
+                // Création de l'hôpital
+                const { data: newHospital, error: createError } = await supabase
+                    .from('hospitals')
+                    .insert({
+                        owner_id: state.user.id,
+                        name: data.name,
+                        email: state.user.email,
+                        phone: data.phone,
+                        address: data.address,
+                        location: data.location,
+                        openings: data.openings,
+                        status: 'pending'
+                    })
+                    .select()
+                    .single();
+
+                if (createError) throw createError;
+                
+                hospital = newHospital;
+                localStorage.removeItem('pending_hospital_creation'); // Nettoyage
+                console.log('✅ Hôpital créé avec succès !');
+
+                // Ajout des services si présents
+                if (data.services && data.services.length > 0) {
+                    const servicesToInsert = data.services.map(serviceId => ({
+                        hospital_id: hospital.id,
+                        service_id: serviceId,
+                        is_available: true
+                    }));
+                    await supabase.from('hospital_services').insert(servicesToInsert);
+                }
+            } else {
+                // Vraiment aucun hôpital et pas de données en attente -> Redirection ou message
+                alert('Votre compte est actif mais aucun profil d\'hôpital n\'est associé. Veuillez contacter le support.');
+                return;
+            }
+        }
+
         state.hospital = hospital;
 
         // Update UI Home

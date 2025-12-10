@@ -581,6 +581,22 @@ async function handleSignup() {
         // VÉRIFICATION DE LA SESSION (Email Confirmation)
         if (!authData.session) {
             console.warn('⚠️ Pas de session active (Email confirmation requise)')
+            
+            // SAUVEGARDE DES DONNÉES POUR FINALISATION ULTÉRIEURE
+            const pendingData = {
+                name: formData.hospitalName,
+                phone: formData.phone,
+                address: formData.address,
+                location: {
+                    type: 'Point',
+                    coordinates: [userLocation.lng, userLocation.lat]
+                },
+                openings: openings,
+                services: selectedServices
+            };
+            localStorage.setItem('pending_hospital_creation', JSON.stringify(pendingData));
+            console.log('💾 Données sauvegardées pour finalisation après validation email');
+
             loader.dismiss()
             
             // Remplacer le formulaire par un message de succès clair
