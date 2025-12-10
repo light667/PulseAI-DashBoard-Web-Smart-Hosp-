@@ -92,6 +92,13 @@ async function loadDashboardData() {
                 console.log('🔄 Finalisation de la création de l\'hôpital...');
                 const data = JSON.parse(pendingData);
                 
+                // Préparation de la location en format WKT pour PostGIS
+                let locationWKT = null;
+                if (data.location && data.location.coordinates) {
+                    const [lng, lat] = data.location.coordinates;
+                    locationWKT = `POINT(${lng} ${lat})`;
+                }
+
                 // Création de l'hôpital
                 const { data: newHospital, error: createError } = await supabase
                     .from('hospitals')
@@ -101,7 +108,7 @@ async function loadDashboardData() {
                         email: state.user.email,
                         phone: data.phone,
                         address: data.address,
-                        location: data.location,
+                        location: locationWKT,
                         openings: data.openings,
                         status: 'pending'
                     })
@@ -137,6 +144,15 @@ async function loadDashboardData() {
         document.getElementById('hospitalAddress').textContent = hospital.address;
         document.getElementById('hospitalPhone').textContent = hospital.phone;
         document.getElementById('hospitalStatus').textContent = hospital.status === 'approved' ? 'Validé' : 'En attente';
+
+        // Update Settings Fields
+        const settingsName = document.getElementById('settingsName');
+        const settingsEmail = document.getElementById('settingsEmail');
+        const settingsPhone = document.getElementById('settingsPhone');
+        
+        if (settingsName) settingsName.value = hospital.name;
+        if (settingsEmail) settingsEmail.value = hospital.email;
+        if (settingsPhone) settingsPhone.value = hospital.phone;
 
         // 2. Charger les services
         await loadServices();
