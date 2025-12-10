@@ -119,9 +119,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // Si vraiment pas de session, on redirige
-            console.warn('⛔ Pas de session, redirection vers index.html');
-            window.location.href = 'index.html';
+            // Retry once after 500ms to be sure
+            setTimeout(async () => {
+                const { data: retryData } = await supabase.auth.getSession();
+                if (retryData.session) {
+                    console.log('⚠️ Session récupérée après délai');
+                    await initSession(retryData.session);
+                    return;
+                }
+                
+                // Si vraiment pas de session, on redirige
+                console.warn('⛔ Pas de session, redirection vers index.html');
+                window.location.href = 'index.html';
+            }, 500);
         }
     });
 });

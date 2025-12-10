@@ -25,12 +25,6 @@ async function initAuth() {
     // 0. Vérifier si déjà connecté (Redirection Dashboard)
     // On ne bloque pas l'initialisation pour ça, mais on redirige si besoin
     try {
-        // VÉRIFICATION ANTI-BOUCLE : Si on vient du dashboard, on ne redirige pas automatiquement
-        if (document.referrer && document.referrer.includes('dashboard.html')) {
-            console.warn('🛑 Boucle détectée : Retour du dashboard. Pas de redirection automatique.');
-            return;
-        }
-
         // On vérifie la session SANS délai
         const { data: { session } } = await supabase.auth.getSession()
         
