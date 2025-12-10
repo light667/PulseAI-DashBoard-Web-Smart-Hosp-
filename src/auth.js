@@ -25,48 +25,42 @@ async function initAuth() {
     // 0. Vérifier si déjà connecté (Redirection Dashboard)
     // On ne bloque pas l'initialisation pour ça, mais on redirige si besoin
     try {
-        // Petit délai pour laisser le temps au client Supabase de s'initialiser correctement
-        setTimeout(async () => {
-            // VÉRIFICATION ANTI-BOUCLE : Si on vient du dashboard, on ne redirige pas automatiquement
-            // Cela signifie que le dashboard nous a rejeté, donc on doit rester sur le login
-            if (document.referrer && document.referrer.includes('dashboard.html')) {
-                console.warn('🛑 Boucle détectée : Retour du dashboard. Pas de redirection automatique.');
-                // Optionnel : Afficher un message à l'utilisateur
-                notify.info('Votre session a expiré. Veuillez vous reconnecter.');
+        // VÉRIFICATION ANTI-BOUCLE : Si on vient du dashboard, on ne redirige pas automatiquement
+        if (document.referrer && document.referrer.includes('dashboard.html')) {
+            console.warn('🛑 Boucle détectée : Retour du dashboard. Pas de redirection automatique.');
+            return;
+        }
+
+        // On vérifie la session SANS délai
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session) {
+            console.log('🔍 Session locale trouvée, validation serveur...');
+            
+            // VALIDATION SERVEUR : Vérifier si l'utilisateur existe vraiment
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            
+            if (userError || !user) {
+                console.warn('⚠️ Session invalide ou utilisateur supprimé. Nettoyage complet...');
+                await supabase.auth.signOut();
+                localStorage.clear();
+                sessionStorage.clear();
+                // Pas de reload ici pour éviter une boucle infinie de rechargement
                 return;
             }
 
-            const { data: { session } } = await supabase.auth.getSession()
-            if (session) {
-                // VALIDATION SERVEUR : Vérifier si l'utilisateur existe vraiment
-                // On utilise getUser() qui fait un appel réseau pour valider le token
-                const { data: { user }, error: userError } = await supabase.auth.getUser();
-                
-                if (userError || !user) {
-                    console.warn('⚠️ Session invalide ou utilisateur supprimé. Nettoyage complet...');
-                    await supabase.auth.signOut();
-                    localStorage.clear(); // Nettoyage radical
-                    sessionStorage.clear();
-                    // On recharge la page pour être sûr d'être propre
-                    window.location.reload();
-                    return;
-                }
-
-                // Check for loop
-                const loopCount = parseInt(sessionStorage.getItem('auth_loop_count') || '0');
-                if (loopCount > 2) {
-                    console.warn('🛑 Boucle de redirection détectée. Arrêt.');
-                    // On ne reset pas tout de suite pour éviter que ça reparte
-                    return;
-                }
-                
-                // Only increment if we are actually redirecting automatically
-                sessionStorage.setItem('auth_loop_count', (loopCount + 1).toString());
-
-                console.log('✅ Session active détectée, redirection vers le dashboard...')
-                window.location.href = 'dashboard.html'
+            // Check for loop
+            const loopCount = parseInt(sessionStorage.getItem('auth_loop_count') || '0');
+            if (loopCount > 2) {
+                console.warn('🛑 Boucle de redirection détectée. Arrêt.');
+                return;
             }
-        }, 1000);
+            
+            sessionStorage.setItem('auth_loop_count', (loopCount + 1).toString());
+
+            console.log('✅ Session validée, redirection vers le dashboard...')
+            window.location.href = 'dashboard.html'
+        }
     } catch (e) {
         console.warn('Erreur vérification session:', e)
     }

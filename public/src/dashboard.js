@@ -28,21 +28,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.preventDefault();
             console.log('🚪 Déconnexion demandée (Global Listener)...');
             
+            // 1. Clear Local Storage IMMEDIATELY (Synchronous)
+            // This prevents any further auth checks from finding a session
+            localStorage.clear();
+            sessionStorage.clear();
+            console.log('✅ Stockage local nettoyé');
+
             try {
-                // 1. Sign out from Supabase
-                const { error } = await supabase.auth.signOut();
-                if (error) console.warn('Erreur Supabase signOut:', error);
-                
-                // 2. Clear Local Storage (Supabase tokens)
-                localStorage.clear(); // Radical mais efficace pour la déconnexion
-                sessionStorage.clear();
-                
-                console.log('✅ Déconnexion locale effectuée');
-                
-                // 3. Redirect
-                window.location.replace('index.html');
+                // 2. Try to sign out from Supabase (Best effort)
+                await supabase.auth.signOut();
             } catch (err) {
-                console.error('❌ Erreur critique déconnexion:', err);
+                console.warn('Erreur Supabase signOut (ignorée car stockage nettoyé):', err);
+            } finally {
+                // 3. Redirect ALWAYS
                 window.location.replace('index.html');
             }
         }
