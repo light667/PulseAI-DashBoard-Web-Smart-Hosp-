@@ -89,34 +89,20 @@ async function loadServices() {
 // ==============================================================================
 function setupEventListeners() {
     // GÉOLOCALISATION
-    document.getElementById('btnGetLocation')?.addEventListener('click', () => {
-        if (!navigator.geolocation) {
-            alert('Géolocalisation non disponible sur ce navigateur')
-            return
-        }
-        
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                userLocation = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                }
-                document.getElementById('locationStatus').value = `${userLocation.lat.toFixed(6)}, ${userLocation.lng.toFixed(6)}`
-            },
-            (error) => {
-                alert('Impossible d\'obtenir votre position: ' + error.message)
-            }
-        )
-    })
+    const btnLocation = document.getElementById('btnGetLocation')
+    if (btnLocation) {
+        btnLocation.addEventListener('click', handleGeolocation)
+    } else {
+        console.warn('Bouton de géolocalisation non trouvé')
+    }
     
     // AJOUT D'HORAIRE
-    document.getElementById('btnAddOpening')?.addEventListener('click', () => {
-        const day = document.getElementById('daySelect').value
-        const range = document.getElementById('timeRange').value
-        
-        openings.push({ day, range })
-        updateOpeningsList()
-    })
+    const btnAddOpening = document.getElementById('btnAddOpening')
+    if (btnAddOpening) {
+        btnAddOpening.addEventListener('click', handleAddOpening)
+    } else {
+        console.warn('Bouton d\'ajout d\'horaire non trouvé')
+    }
     
     // LOGIN
     document.getElementById('btnLogin')?.addEventListener('click', handleLogin)
@@ -132,20 +118,133 @@ function setupEventListeners() {
 }
 
 // ==============================================================================
+// GÉOLOCALISATION
+// ==============================================================================
+function handleGeolocation() {
+    if (!navigator.geolocation) {
+        notify.error('La géolocalisation n\'est pas disponible sur votre navigateur')
+        return
+    }
+    
+    const btn = document.getElementById('btnGetLocation')
+    const statusInput = document.getElementById('locationStatus')
+    
+    // Désactiver le bouton pendant le chargement
+    if (btn) {
+        btn.disabled = true
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Localisation...'
+    }
+    
+    notify.info('Demande de localisation en cours...')
+    
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            userLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            }
+            
+            if (statusInput) {
+                statusInput.value = `📍 ${userLocation.lat.toFixed(6)}, ${userLocation.lng.toFixed(6)}`
+                statusInput.classList.add('text-success', 'fw-bold')
+            }
+            
+            if (btn) {
+                btn.disabled = false
+                btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Position détectée'
+                btn.classList.remove('btn-outline-secondary')
+                btn.classList.add('btn-success')
+            }
+            
+            notify.success('Position détectée avec succès!')
+        },
+        (error) => {
+            let errorMessage = 'Impossible d\'obtenir votre position'
+            
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage = 'Vous avez refusé l\'accès à votre position. Veuillez autoriser la géolocalisation dans les paramètres de votre navigateur.'
+                    break
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage = 'Position indisponible. Vérifiez votre connexion GPS.'
+                    break
+                case error.TIMEOUT:
+                    errorMessage = 'La demande de position a expiré. Réessayez.'
+                    break
+            }
+            
+            notify.error(errorMessage)
+            
+            if (btn) {
+                btn.disabled = false
+                btn.innerHTML = '<i class="bi bi-crosshair"></i> Détecter ma position'
+            }
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    )
+}
+
+// ==============================================================================
+// AJOUT D'HORAIRE
+// ==============================================================================
+function handleAddOpening() {
+    const daySelect = document.getElementById('daySelect')
+    const timeRange = document.getElementById('timeRange')
+    
+    if (!daySelect || !timeRange) {
+        notify.error('Erreur: éléments de formulaire non trouvés')
+        return
+    }
+    
+    const day = daySelect.value
+    const range = timeRange.value
+    
+    // Vérifier si cette combinaison existe déjà
+    const exists = openings.some(opening => 
+        opening.day === day && opening.range === range
+    )
+    
+    if (exists) {
+        notify.warning(`${day} ${range} est déjà ajouté`)
+        return
+    }
+    
+    openings.push({ day, range })
+    updateOpeningsList()
+    notify.success(`${day} ${range} ajouté`)
+}
+
+// ==============================================================================
 // AFFICHER LA LISTE DES HORAIRES
 // ==============================================================================
 function updateOpeningsList() {
     const list = document.getElementById('openingsList')
+    if (!list) {
+        console.warn('Liste des horaires non trouvée')
+        return
+    }
+    
     list.innerHTML = ''
+    
+    if (openings.length === 0) {
+        list.innerHTML = '<small class="text-muted">Aucun horaire ajouté</small>'
+        return
+    }
     
     openings.forEach((opening, index) => {
         const badge = document.createElement('span')
-        badge.className = 'badge bg-primary'
-        badge.innerHTML = `${opening.day} ${opening.range} <i class="bi bi-x-circle ms-1"></i>`
+        badge.className = 'badge bg-primary me-1 mb-1'
         badge.style.cursor = 'pointer'
+        badge.innerHTML = `${opening.day} ${opening.range} <i class="bi bi-x-circle ms-1"></i>`
+        badge.title = 'Cliquer pour supprimer'
         badge.onclick = () => {
             openings.splice(index, 1)
             updateOpeningsList()
+            notify.info(`${opening.day} ${opening.range} supprimé`)
         }
         list.appendChild(badge)
     })
