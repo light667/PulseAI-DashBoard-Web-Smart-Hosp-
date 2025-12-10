@@ -564,6 +564,21 @@ async function handleSignup() {
         }
         
         console.log('✅ Compte Auth créé:', authData.user.id)
+        
+        // VÉRIFICATION DE LA SESSION (Email Confirmation)
+        if (!authData.session) {
+            console.warn('⚠️ Pas de session active (Email confirmation requise ?)')
+            loader.update('Compte créé ! Veuillez vérifier vos emails pour valider le compte.', 'success')
+            notify.info('Un email de confirmation a été envoyé à ' + formData.email)
+            
+            // On ne peut pas créer l'hôpital via l'API sans session
+            // On arrête ici proprement
+            setTimeout(() => {
+                window.location.href = 'index.html'
+            }, 3000)
+            return
+        }
+
         loader.update('Compte créé! Configuration de l\'hôpital...', 'info')
         
         // 2. CRÉER L'HÔPITAL
