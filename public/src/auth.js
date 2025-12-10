@@ -38,6 +38,16 @@ async function initAuth() {
 
             const { data: { session } } = await supabase.auth.getSession()
             if (session) {
+                // Check for loop
+                const loopCount = parseInt(sessionStorage.getItem('auth_loop_count') || '0');
+                if (loopCount > 2) {
+                    console.warn('🛑 Boucle de redirection détectée. Arrêt.');
+                    // notify.error('Problème de connexion. Veuillez réessayer.');
+                    // On ne reset pas tout de suite pour éviter que ça reparte
+                    return;
+                }
+                sessionStorage.setItem('auth_loop_count', (loopCount + 1).toString());
+
                 console.log('✅ Session active détectée, redirection vers le dashboard...')
                 window.location.href = 'dashboard.html'
             }
@@ -718,6 +728,15 @@ supabase.auth.onAuthStateChange((event, session) => {
     // Cela évite les redirections lors du chargement de la page
     if (event === 'SIGNED_IN' && session && window.location.pathname.includes('index.html')) {
         console.log('Redirection vers dashboard après connexion réussie')
+        
+        // Check for loop
+        const loopCount = parseInt(sessionStorage.getItem('auth_loop_count') || '0');
+        if (loopCount > 2) {
+            console.warn('🛑 Boucle de redirection détectée (onAuthStateChange). Arrêt.');
+            return;
+        }
+        sessionStorage.setItem('auth_loop_count', (loopCount + 1).toString());
+
         setTimeout(() => {
             window.location.href = 'dashboard.html'
         }, 500)

@@ -13,6 +13,19 @@ const state = {
 // INITIALISATION
 // ==============================================================================
 document.addEventListener('DOMContentLoaded', async () => {
+    // Sidebar Toggle
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+            document.body.classList.toggle('sidebar-collapsed');
+        });
+    }
+
+    // Clear auth loop flag if we reached dashboard successfully
+    if (sessionStorage.getItem('auth_loop_count')) {
+        sessionStorage.removeItem('auth_loop_count');
+    }
+
     // Vérifier si on est en train de traiter un lien magique ou une confirmation
     const isAuthRedirect = window.location.hash && (
         window.location.hash.includes('access_token') || 

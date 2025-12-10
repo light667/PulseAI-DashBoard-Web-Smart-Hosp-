@@ -19,6 +19,18 @@
         body {
             background-color: #f8f9fa;
             overflow-x: hidden;
+            transition: all 0.3s;
+        }
+
+        /* SIDEBAR COLLAPSED STATE */
+        body.sidebar-collapsed .sidebar {
+            margin-left: calc(var(--sidebar-width) * -1);
+        }
+        body.sidebar-collapsed .main-content {
+            margin-left: 0;
+        }
+        body.sidebar-collapsed .top-header {
+            left: 0;
         }
 
         /* SIDEBAR */
@@ -208,7 +220,12 @@
 
     <!-- HEADER -->
     <header class="top-header">
-        <h5 class="m-0 fw-bold text-secondary" id="pageTitle">Tableau de bord</h5>
+        <div class="d-flex align-items-center gap-3">
+            <button id="sidebarToggle" class="btn btn-link text-dark p-0 border-0 me-2">
+                <i class="bi bi-list fs-4"></i>
+            </button>
+            <h5 class="m-0 fw-bold text-secondary" id="pageTitle">Tableau de bord</h5>
+        </div>
         <div class="d-flex align-items-center gap-3">
             <div class="dropdown">
                 <button class="btn btn-light rounded-circle position-relative" type="button">
