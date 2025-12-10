@@ -38,6 +38,17 @@ async function initAuth() {
 
             const { data: { session } } = await supabase.auth.getSession()
             if (session) {
+                // VALIDATION SERVEUR : Vérifier si l'utilisateur existe vraiment
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                
+                if (userError || !user) {
+                    console.warn('⚠️ Session invalide ou utilisateur supprimé. Nettoyage...');
+                    await supabase.auth.signOut();
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    return;
+                }
+
                 // Check for loop
                 const loopCount = parseInt(sessionStorage.getItem('auth_loop_count') || '0');
                 if (loopCount > 2) {
@@ -417,7 +428,9 @@ function updateOpeningsList() {
 // ==============================================================================
 // LOGIN
 // ==============================================================================
-async function handleLogin() {
+async function handleLogin(e) {
+    if (e) e.preventDefault(); // Empêcher le rechargement de la page
+    
     const email = document.getElementById('loginEmail').value.trim()
     const password = document.getElementById('loginPassword').value
     
