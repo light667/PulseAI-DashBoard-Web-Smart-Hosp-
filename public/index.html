@@ -198,29 +198,25 @@ function nextStep(stepNumber) {
     if (currentStepNum === 1 && stepNumber === 2) {
         const email = document.getElementById('signupEmail')?.value.trim();
         const password = document.getElementById('signupPassword')?.value;
-        const confirmPassword = document.getElementById('confirmPassword')?.value;
         
         if (!email) {
             alert('⚠️ Veuillez entrer votre email');
-            document.getElementById('signupEmail').focus();
+            const emailField = document.getElementById('signupEmail');
+            if (emailField) emailField.focus();
             return;
         }
         
         if (!email.includes('@')) {
             alert('⚠️ Email invalide');
-            document.getElementById('signupEmail').focus();
+            const emailField = document.getElementById('signupEmail');
+            if (emailField) emailField.focus();
             return;
         }
         
         if (!password || password.length < 6) {
             alert('⚠️ Le mot de passe doit contenir au moins 6 caractères');
-            document.getElementById('signupPassword').focus();
-            return;
-        }
-        
-        if (password !== confirmPassword) {
-            alert('⚠️ Les mots de passe ne correspondent pas');
-            document.getElementById('confirmPassword').focus();
+            const passwordField = document.getElementById('signupPassword');
+            if (passwordField) passwordField.focus();
             return;
         }
         
@@ -229,25 +225,28 @@ function nextStep(stepNumber) {
     
     // Validation étape 2 → 3
     if (currentStepNum === 2 && stepNumber === 3) {
-        const hospitalName = document.getElementById('hospitalName')?.value.trim();
-        const phone = document.getElementById('hospitalPhone')?.value.trim();
-        const address = document.getElementById('hospitalAddress')?.value.trim();
+        const hospitalName = document.getElementById('signupHospitalName')?.value.trim();
+        const phone = document.getElementById('signupPhone')?.value.trim();
+        const address = document.getElementById('signupAddress')?.value.trim();
         
         if (!hospitalName || hospitalName.length < 3) {
             alert('⚠️ Veuillez entrer le nom de votre établissement (minimum 3 caractères)');
-            document.getElementById('hospitalName').focus();
+            const nameField = document.getElementById('signupHospitalName');
+            if (nameField) nameField.focus();
             return;
         }
         
         if (!phone) {
             alert('⚠️ Veuillez entrer un numéro de téléphone');
-            document.getElementById('hospitalPhone').focus();
+            const phoneField = document.getElementById('signupPhone');
+            if (phoneField) phoneField.focus();
             return;
         }
         
         if (!address || address.length < 10) {
             alert('⚠️ Veuillez entrer l\'adresse complète de votre établissement');
-            document.getElementById('hospitalAddress').focus();
+            const addressField = document.getElementById('signupAddress');
+            if (addressField) addressField.focus();
             return;
         }
         
