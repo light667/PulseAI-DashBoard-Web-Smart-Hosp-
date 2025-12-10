@@ -473,10 +473,12 @@ async function handleSignup() {
     selectedServices = Array.from(document.querySelectorAll('#servicesGrid input:checked'))
         .map(input => parseInt(input.value))
     
-    if (selectedServices.length === 0) {
-        notify.warning('Veuillez sélectionner au moins un service médical')
-        return
-    }
+    // ⚠️ DÉSACTIVATION TEMPORAIRE DE LA VÉRIFICATION DES SERVICES
+    // Si aucun service n'est chargé (problème réseau/cache), on permet quand même l'inscription
+    // if (selectedServices.length === 0) {
+    //     notify.warning('Veuillez sélectionner au moins un service médical')
+    //     return
+    // }
     
     if (!document.getElementById('termsCheck')?.checked) {
         notify.warning('Veuillez accepter les conditions d\'utilisation')
@@ -485,8 +487,8 @@ async function handleSignup() {
     
     const spinner = document.getElementById('signupSpinner')
     const btn = document.getElementById('btnSignup')
-    spinner.classList.remove('d-none')
-    btn.disabled = true
+    if (spinner) spinner.classList.remove('d-none')
+    if (btn) btn.disabled = true
     
     console.log('🚀 Début de l\'inscription...')
     console.log('📧 Email:', formData.email)
