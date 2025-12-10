@@ -12,6 +12,10 @@ echo "📦 Copie des fichiers JavaScript..."
 cp -r src/*.js public/src/
 cp -r src/utils/*.js public/src/utils/
 
+# Copier les fichiers HTML
+echo "📄 Copie des fichiers HTML..."
+cp *.html public/
+
 echo "✅ Fichiers copiés avec succès!"
 echo ""
 echo "Structure créée:"
