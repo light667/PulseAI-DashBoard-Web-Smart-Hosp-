@@ -150,7 +150,24 @@ function setupEventListeners() {
         signupForm.addEventListener('submit', (e) => {
             e.preventDefault()
             console.log('📝 Formulaire d\'inscription soumis!')
-            handleSignup()
+            
+            // Afficher le spinner immédiatement pour montrer que ça charge
+            const spinner = document.getElementById('signupSpinner')
+            const btn = document.getElementById('btnSignup')
+            if (spinner) spinner.classList.remove('d-none')
+            if (btn) btn.disabled = true
+            
+            // Petit délai pour laisser le DOM se mettre à jour
+            setTimeout(() => {
+                try {
+                    handleSignup()
+                } catch (err) {
+                    console.error('CRASH handleSignup:', err)
+                    if (spinner) spinner.classList.add('d-none')
+                    if (btn) btn.disabled = false
+                    alert('Erreur interne: ' + err.message)
+                }
+            }, 50)
         })
         console.log('✓ Écouteur SIGNUP (submit) configuré')
     }
