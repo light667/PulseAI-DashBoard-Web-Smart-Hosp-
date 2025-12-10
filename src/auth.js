@@ -580,15 +580,32 @@ async function handleSignup() {
         
         // VÉRIFICATION DE LA SESSION (Email Confirmation)
         if (!authData.session) {
-            console.warn('⚠️ Pas de session active (Email confirmation requise ?)')
-            loader.update('Compte créé ! Veuillez vérifier vos emails pour valider le compte.', 'success')
-            notify.info('Un email de confirmation a été envoyé à ' + formData.email)
+            console.warn('⚠️ Pas de session active (Email confirmation requise)')
+            loader.dismiss()
             
-            // On ne peut pas créer l'hôpital via l'API sans session
-            // On arrête ici proprement
-            setTimeout(() => {
-                window.location.href = 'index.html'
-            }, 3000)
+            // Remplacer le formulaire par un message de succès clair
+            const signupForm = document.getElementById('signupForm')
+            if (signupForm) {
+                signupForm.innerHTML = `
+                    <div class="text-center py-5">
+                        <div class="mb-4">
+                            <i class="bi bi-envelope-check text-success" style="font-size: 4rem;"></i>
+                        </div>
+                        <h4 class="mb-3">Vérifiez vos emails</h4>
+                        <p class="text-muted mb-4">
+                            Un lien de confirmation a été envoyé à <strong>${formData.email}</strong>.<br>
+                            Veuillez cliquer dessus pour activer votre compte.
+                        </p>
+                        <div class="alert alert-info small mx-3">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Une fois confirmé, vous pourrez vous connecter à votre tableau de bord.
+                        </div>
+                        <a href="index.html" class="btn btn-outline-primary mt-3">Retour à l'accueil</a>
+                    </div>
+                `
+                // Faire défiler vers le haut pour voir le message
+                signupForm.scrollIntoView({ behavior: 'smooth' })
+            }
             return
         }
 
