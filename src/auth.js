@@ -628,8 +628,11 @@ async function handleSignup() {
             notify.error('Erreur lors de l\'inscription: ' + error.message)
         }
     } finally {
-        spinner.classList.add('d-none')
-        btn.disabled = false
+        // Récupérer les éléments à nouveau car ils ne sont pas dans la portée du finally
+        const spinner = document.getElementById('signupSpinner')
+        const btn = document.getElementById('btnSignup')
+        if (spinner) spinner.classList.add('d-none')
+        if (btn) btn.disabled = false
     }
 }
 
