@@ -66,7 +66,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             console.warn('⛔ Pas de session, redirection vers index.html');
-            window.location.href = 'index.html';
+            
+            // Au lieu de rediriger brutalement, on affiche un message pour casser la boucle
+            // si jamais auth.js décide de nous renvoyer ici.
+            document.body.innerHTML = `
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center;">
+                    <h2 style="color:#dc3545;">Session expirée ou invalide</h2>
+                    <p>Nous ne parvenons pas à récupérer vos informations de connexion.</p>
+                    <button onclick="window.location.href='index.html'" style="padding:10px 20px;background:#0d6efd;color:white;border:none;border-radius:5px;cursor:pointer;font-size:16px;">
+                        Retourner à la connexion
+                    </button>
+                </div>
+            `;
+            // window.location.href = 'index.html'; // Désactivé pour éviter la boucle infinie
         }
     });
 });

@@ -26,13 +26,19 @@ async function initAuth() {
     // On ne bloque pas l'initialisation pour ça, mais on redirige si besoin
     try {
         // Petit délai pour laisser le temps au client Supabase de s'initialiser correctement
-        // et éviter les boucles de redirection trop rapides
         setTimeout(async () => {
+            // VÉRIFICATION ANTI-BOUCLE : Si on vient du dashboard, on ne redirige pas automatiquement
+            // Cela signifie que le dashboard nous a rejeté, donc on doit rester sur le login
+            if (document.referrer && document.referrer.includes('dashboard.html')) {
+                console.warn('🛑 Boucle détectée : Retour du dashboard. Pas de redirection automatique.');
+                // Optionnel : Afficher un message à l'utilisateur
+                notify.info('Votre session a expiré. Veuillez vous reconnecter.');
+                return;
+            }
+
             const { data: { session } } = await supabase.auth.getSession()
             if (session) {
                 console.log('✅ Session active détectée, redirection vers le dashboard...')
-                // Vérification anti-boucle simple : si on vient juste d'être redirigé depuis le dashboard
-                // (difficile à détecter parfaitement sans paramètre, mais le délai aide)
                 window.location.href = 'dashboard.html'
             }
         }, 500);
