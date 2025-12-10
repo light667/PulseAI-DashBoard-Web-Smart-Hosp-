@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Inscription - Debug</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .log { background: #fff; padding: 10px; margin: 5px 0; border-left: 3px solid #007bff; }
+        .error { border-left-color: #dc3545; background: #fff0f0; }
+        .success { border-left-color: #28a745; background: #f0fff0; }
+        .info { border-left-color: #17a2b8; }
+        pre { background: #f8f9fa; padding: 10px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Test Debug Inscription</h1>
+    <div id="logs"></div>
+    
+    <h3>Étapes de test</h3>
+    <button onclick="testStep1()">1️⃣ Tester Supabase Connection</button>
+    <button onclick="testStep2()">2️⃣ Tester Création Compte</button>
+    <button onclick="testStep3()">3️⃣ Tester Création Hôpital</button>
+    <button onclick="testStep4()">4️⃣ Voir les tables</button>
+
+    <script type="module">
+        import { supabase } from './src/supabase.js?v=11'
+        import { api } from './src/utils/api.js?v=11'
+        
+        window.supabase = supabase
+        window.api = api
+        
+        function addLog(message, type = 'info') {
+            const div = document.createElement('div')
+            div.className = `log ${type}`
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`
+            document.getElementById('logs').appendChild(div)
+            console.log(message)
+        }
+        
+        window.addLog = addLog
+        
+        window.testStep1 = async function() {
+            addLog('🔄 Test de connexion Supabase...')
+            try {
+                const { data, error } = await supabase.from('services').select('count')
+                if (error) throw error
+                addLog(`✅ Connexion OK - ${data.length} services trouvés`, 'success')
+                addLog(`<pre>${JSON.stringify(data.slice(0, 3), null, 2)}</pre>`)
+            } catch (err) {
+                addLog(`❌ Erreur: ${err.message}`, 'error')
+            }
+        }
+        
+        window.testStep2 = async function() {
+            const email = prompt('Email de test:', 'test' + Date.now() + '@test.com')
+            const password = 'Test123456!'
+            
+            addLog(`🔄 Création compte: ${email}`)
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            full_name: 'Test Hospital',
+                            role: 'hospital_admin'
+                        }
+                    }
+                })
+                
+                if (error) throw error
+                
+                addLog(`✅ Compte créé: ${data.user.id}`, 'success')
+                addLog(`<pre>${JSON.stringify(data, null, 2)}</pre>`)
+                
+                window.testUserId = data.user.id
+                window.testEmail = email
+            } catch (err) {
+                addLog(`❌ Erreur: ${err.message}`, 'error')
+                addLog(`<pre>${JSON.stringify(err, null, 2)}</pre>`, 'error')
+            }
+        }
+        
+        window.testStep3 = async function() {
+            if (!window.testUserId) {
+                addLog('❌ Créez d\'abord un compte (Étape 2)', 'error')
+                return
+            }
+            
+            addLog('🔄 Création hôpital...')
+            try {
+                const hospitalData = {
+                    owner_id: window.testUserId,
+                    name: 'Hôpital Test',
+                    email: window.testEmail,
+                    phone: '+225 XX XX XX XX',
+                    address: 'Abidjan, Cocody',
+                    location: {
+                        type: 'Point',
+                        coordinates: [-4.01, 5.36]
+                    },
+                    status: 'pending'
+                }
+                
+                addLog(`📝 Données: <pre>${JSON.stringify(hospitalData, null, 2)}</pre>`)
+                
+                const { data, error } = await supabase
+                    .from('hospitals')
+                    .insert(hospitalData)
+                    .select()
+                    .single()
+                
+                if (error) throw error
+                
+                addLog(`✅ Hôpital créé: ${data.id}`, 'success')
+                addLog(`<pre>${JSON.stringify(data, null, 2)}</pre>`)
+                
+                window.testHospitalId = data.id
+            } catch (err) {
+                addLog(`❌ Erreur: ${err.message}`, 'error')
+                addLog(`<pre>${JSON.stringify(err, null, 2)}</pre>`, 'error')
+            }
+        }
+        
+        window.testStep4 = async function() {
+            addLog('🔄 Vérification des tables...')
+            try {
+                const { data: profiles, error: e1 } = await supabase.from('profiles').select('*')
+                const { data: hospitals, error: e2 } = await supabase.from('hospitals').select('*')
+                const { data: services, error: e3 } = await supabase.from('services').select('count')
+                
+                addLog(`📊 Profiles: ${profiles?.length || 0}`, 'info')
+                addLog(`📊 Hospitals: ${hospitals?.length || 0}`, 'info')
+                addLog(`📊 Services: ${services?.[0]?.count || 0}`, 'info')
+                
+                if (profiles?.length) {
+                    addLog(`<pre>Profiles:\n${JSON.stringify(profiles, null, 2)}</pre>`)
+                }
+                if (hospitals?.length) {
+                    addLog(`<pre>Hospitals:\n${JSON.stringify(hospitals, null, 2)}</pre>`)
+                }
+            } catch (err) {
+                addLog(`❌ Erreur: ${err.message}`, 'error')
+            }
+        }
+        
+        addLog('✅ Page de debug chargée', 'success')
+        addLog('👉 Cliquez sur les boutons pour tester chaque étape')
+    </script>
+</body>
+</html>
